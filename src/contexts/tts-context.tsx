@@ -71,6 +71,16 @@ interface TTSState {
   geminiModel: string;
   setGeminiModel: (v: string) => void;
   loadGeminiModels: () => Promise<void>;
+  geminiVoice: string;
+  setGeminiVoice: (v: string) => void;
+  geminiScene: string;
+  setGeminiScene: (v: string) => void;
+  geminiStyle: string;
+  setGeminiStyle: (v: string) => void;
+  geminiPace: string;
+  setGeminiPace: (v: string) => void;
+  geminiAccent: string;
+  setGeminiAccent: (v: string) => void;
 
   // playback
   status: Status;
@@ -105,7 +115,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [text, setText] = useState("");
   const [engine, setEngine] = useState<Engine>("browser");
 
-
   const [rate, setRate] = useState(1);
   const [pitch, setPitch] = useState(1);
   const [volume, setVolume] = useState(1);
@@ -114,9 +123,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [browserVoiceURI, setBrowserVoiceURI] = useState("");
 
   const [elevenKey, setElevenKey] = useState("");
-  const [elevenVoices, setElevenVoices] = useState<
-    { voice_id: string; name: string }[]
-  >([]);
+  const [elevenVoices, setElevenVoices] = useState<{ voice_id: string; name: string }[]>([]);
   const [elevenVoiceId, setElevenVoiceId] = useState("");
   const [elevenManualId, setElevenManualId] = useState("");
   const [stability, setStability] = useState(0.5);
@@ -127,6 +134,11 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [geminiKey, setGeminiKey] = useState("");
   const [geminiModels, setGeminiModels] = useState<string[]>([]);
   const [geminiModel, setGeminiModel] = useState("");
+  const [geminiVoice, setGeminiVoice] = useState("Kore");
+  const [geminiScene, setGeminiScene] = useState("");
+  const [geminiStyle, setGeminiStyle] = useState("");
+  const [geminiPace, setGeminiPace] = useState("");
+  const [geminiAccent, setGeminiAccent] = useState("");
 
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -145,10 +157,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [theme]);
 
-  const toggleTheme = useCallback(
-    () => setTheme((t) => (t === "light" ? "dark" : "light")),
-    [],
-  );
+  const toggleTheme = useCallback(() => setTheme((t) => (t === "light" ? "dark" : "light")), []);
 
   // locale/dir — apply on mount and whenever locale changes
   useEffect(() => {
@@ -163,7 +172,6 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
   }, []);
-
 
   // load browser voices
   useEffect(() => {
@@ -186,11 +194,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [browserVoices, locale]);
 
   useEffect(() => {
-    if (
-      !browserVoiceURI &&
-      filteredBrowserVoices.length > 0 &&
-      engine === "browser"
-    ) {
+    if (!browserVoiceURI && filteredBrowserVoices.length > 0 && engine === "browser") {
       setBrowserVoiceURI(filteredBrowserVoices[0].voiceURI);
     }
   }, [filteredBrowserVoices, browserVoiceURI, engine]);
@@ -207,11 +211,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const pause = useCallback(() => {
-    if (
-      utterRef.current &&
-      typeof window !== "undefined" &&
-      "speechSynthesis" in window
-    ) {
+    if (utterRef.current && typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.pause();
     }
     audioRef.current?.pause();
@@ -232,9 +232,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    const v = window.speechSynthesis
-      .getVoices()
-      .find((x) => x.voiceURI === browserVoiceURI);
+    const v = window.speechSynthesis.getVoices().find((x) => x.voiceURI === browserVoiceURI);
     if (v) u.voice = v;
     u.lang = v?.lang || (locale === "ar" ? "ar-SA" : "en-US");
     u.rate = rate;
@@ -269,27 +267,24 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!elevenKey) throw new Error("أدخل مفتاح ElevenLabs API");
     if (!vId) throw new Error("اختر صوتًا أو أدخل Voice ID");
     setStatus("loading");
-    const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${vId}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": elevenKey,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability,
-            similarity_boost: similarity,
-            style,
-            use_speaker_boost: speakerBoost,
-          },
-        }),
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${vId}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": elevenKey,
+        "Content-Type": "application/json",
+        Accept: "audio/mpeg",
       },
-    );
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability,
+          similarity_boost: similarity,
+          style,
+          use_speaker_boost: speakerBoost,
+        },
+      }),
+    });
     if (!res.ok) {
       const t = await res.text();
       throw new Error(`ElevenLabs: ${res.status} ${t.slice(0, 120)}`);
@@ -329,9 +324,26 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, [elevenKey]);
 
   // Gemini TTS via generateContent with response_modalities: ["AUDIO"]
+  const buildGeminiPrompt = useCallback(
+    (raw: string) => {
+      const scene = geminiScene.trim();
+      let instruction =
+        "TTS the following text exactly as written, verbatim, do not reply to it or add anything of your own.";
+      const bits: string[] = [];
+      if (geminiStyle) bits.push(`${geminiStyle} tone`);
+      if (geminiPace) bits.push(`${geminiPace} pace`);
+      if (geminiAccent) bits.push(`${geminiAccent} accent`);
+      if (bits.length) instruction += ` Speak in a ${bits.join(", ")}.`;
+      if (scene) instruction += ` Context/scene: ${scene}.`;
+      return `${instruction}\n${raw}`;
+    },
+    [geminiScene, geminiStyle, geminiPace, geminiAccent],
+  );
+
   const speakGemini = useCallback(async () => {
     if (!geminiKey) throw new Error("أدخل مفتاح Google API");
     const model = geminiModel || "gemini-2.5-flash-preview-tts";
+    const voiceName = geminiVoice || "Kore";
     setStatus("loading");
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
@@ -339,12 +351,12 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
+          contents: [{ parts: [{ text: buildGeminiPrompt(text) }] }],
           generationConfig: {
             responseModalities: ["AUDIO"],
             speechConfig: {
               voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: "Kore" },
+                prebuiltVoiceConfig: { voiceName },
               },
             },
           },
@@ -369,7 +381,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       audioRef.current.volume = volume;
     }
     setStatus("playing");
-  }, [geminiKey, geminiModel, text, playAudioBlob, rate, volume]);
+  }, [geminiKey, geminiModel, geminiVoice, text, buildGeminiPrompt, playAudioBlob, rate, volume]);
 
   const loadGeminiModels = useCallback(async () => {
     if (!geminiKey) throw new Error("أدخل المفتاح أولاً");
@@ -457,6 +469,16 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     geminiModel,
     setGeminiModel,
     loadGeminiModels,
+    geminiVoice,
+    setGeminiVoice,
+    geminiScene,
+    setGeminiScene,
+    geminiStyle,
+    setGeminiStyle,
+    geminiPace,
+    setGeminiPace,
+    geminiAccent,
+    setGeminiAccent,
     status,
     errorMsg,
     lastAudioUrl,

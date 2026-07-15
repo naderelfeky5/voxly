@@ -28,9 +28,7 @@ function Header() {
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-5 sm:flex sm:justify-between">
       <div className="flex min-w-0 items-center gap-2.5">
         <BrandMark />
-        <span className="truncate text-xl font-bold tracking-tight sm:text-2xl">
-          Voxly
-        </span>
+        <span className="truncate text-xl font-bold tracking-tight sm:text-2xl">Voxly</span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <button
@@ -55,11 +53,51 @@ function BrandMark() {
   return (
     <span className="inline-flex size-9 items-center justify-center" aria-hidden>
       <svg viewBox="0 0 34 34" width="34" height="34" xmlns="http://www.w3.org/2000/svg">
-        <rect className="brand-bar" x="1" y="12" width="4" height="10" rx="2" fill="var(--color-primary)" />
-        <rect className="brand-bar" x="8" y="8" width="4" height="18" rx="2" fill="color-mix(in oklch, var(--color-gold) 80%, white)" />
-        <rect className="brand-bar" x="15" y="3" width="4" height="28" rx="2" fill="var(--color-gold)" />
-        <rect className="brand-bar" x="22" y="8" width="4" height="18" rx="2" fill="color-mix(in oklch, var(--color-gold) 80%, white)" />
-        <rect className="brand-bar" x="29" y="12" width="4" height="10" rx="2" fill="var(--color-primary)" />
+        <rect
+          className="brand-bar"
+          x="1"
+          y="12"
+          width="4"
+          height="10"
+          rx="2"
+          fill="var(--color-primary)"
+        />
+        <rect
+          className="brand-bar"
+          x="8"
+          y="8"
+          width="4"
+          height="18"
+          rx="2"
+          fill="color-mix(in oklch, var(--color-gold) 80%, white)"
+        />
+        <rect
+          className="brand-bar"
+          x="15"
+          y="3"
+          width="4"
+          height="28"
+          rx="2"
+          fill="var(--color-gold)"
+        />
+        <rect
+          className="brand-bar"
+          x="22"
+          y="8"
+          width="4"
+          height="18"
+          rx="2"
+          fill="color-mix(in oklch, var(--color-gold) 80%, white)"
+        />
+        <rect
+          className="brand-bar"
+          x="29"
+          y="12"
+          width="4"
+          height="10"
+          rx="2"
+          fill="var(--color-primary)"
+        />
       </svg>
     </span>
   );
@@ -68,11 +106,7 @@ function BrandMark() {
 function HeroWave() {
   const heights = [7, 13, 19, 25, 19, 13, 7];
   return (
-    <svg
-      viewBox="0 0 130 30"
-      aria-hidden
-      className="mx-auto mt-5 block h-7 w-32"
-    >
+    <svg viewBox="0 0 130 30" aria-hidden className="mx-auto mt-5 block h-7 w-32">
       {heights.map((h, i) => (
         <rect
           key={i}
@@ -95,9 +129,7 @@ function Hero() {
     <section className="mb-8 text-center md:mb-12">
       <h1 className="intro-fade intro-fade-1 whitespace-nowrap text-2xl font-extrabold tracking-tight sm:text-3xl md:text-5xl">
         <span className="text-primary">Voxly</span>{" "}
-        <span>
-          {locale === "ar" ? "— حوّل نصوصك لصوت" : "— turn text into voice"}
-        </span>
+        <span>{locale === "ar" ? "— حوّل نصوصك لصوت" : "— turn text into voice"}</span>
       </h1>
       <HeroWave />
       <p className="intro-fade intro-fade-2 mx-auto mt-5 max-w-lg text-base leading-relaxed text-muted-foreground">
@@ -108,7 +140,6 @@ function Hero() {
     </section>
   );
 }
-
 
 function Card() {
   return (
@@ -159,9 +190,7 @@ function TextArea() {
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={
-          locale === "ar" ? "اكتب أو الصق النص هنا..." : "Type or paste text..."
-        }
+        placeholder={locale === "ar" ? "اكتب أو الصق النص هنا..." : "Type or paste text..."}
         className="min-h-40 w-full resize-y rounded-2xl border border-border bg-muted/60 p-4 text-base leading-relaxed outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
       />
     </div>
@@ -184,7 +213,6 @@ function EqualizerLine() {
   );
 }
 
-
 function Slider({
   label,
   value,
@@ -204,9 +232,7 @@ function Slider({
     <div>
       <div className="mb-1.5 flex items-center justify-between text-sm font-semibold">
         <span>{label}</span>
-        <span className="tabular-nums text-muted-foreground">
-          {value.toFixed(2)}
-        </span>
+        <span className="tabular-nums text-muted-foreground">{value.toFixed(2)}</span>
       </div>
       <input
         type="range"
@@ -217,23 +243,13 @@ function Slider({
         onChange={(e) => onChange(parseFloat(e.target.value))}
         style={{ ["--pct" as string]: `${((value - min) / (max - min)) * 100}%` }}
         className="slider-gold"
-
       />
     </div>
   );
 }
 
 function Sliders() {
-  const {
-    rate,
-    setRate,
-    pitch,
-    setPitch,
-    volume,
-    setVolume,
-    engine,
-    locale,
-  } = useTTS();
+  const { rate, setRate, pitch, setPitch, volume, setVolume, engine, locale } = useTTS();
   return (
     <div className="space-y-5">
       <Slider
@@ -316,8 +332,7 @@ function EnginePanel() {
 }
 
 function BrowserPanel() {
-  const { browserVoices, browserVoiceURI, setBrowserVoiceURI, locale } =
-    useTTS();
+  const { browserVoices, browserVoiceURI, setBrowserVoiceURI, locale } = useTTS();
   return (
     <div>
       <label className="mb-1.5 block text-sm font-semibold">
@@ -383,10 +398,7 @@ function ElevenPanel() {
           disabled={busy}
           className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90 disabled:opacity-60"
         >
-          ⟳{" "}
-          {isAr
-            ? "تحميل الأصوات المتاحة على حسابي"
-            : "Load my available voices"}
+          ⟳ {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load my available voices"}
         </button>
       </div>
 
@@ -410,17 +422,14 @@ function ElevenPanel() {
         onClick={() => setAdvanced((v) => !v)}
         className="text-sm font-semibold text-primary hover:underline"
       >
-        {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}{" "}
-        {advanced ? "▲" : "▼"}
+        {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"} {advanced ? "▲" : "▼"}
       </button>
 
       {advanced && (
         <div className="space-y-4 rounded-2xl border border-border bg-muted/40 p-4">
           <div>
             <label className="mb-1.5 block text-sm font-semibold">
-              {isAr
-                ? "أو أدخل معرّف الصوت يدويًا (Voice ID)"
-                : "Or enter Voice ID manually"}
+              {isAr ? "أو أدخل معرّف الصوت يدويًا (Voice ID)" : "Or enter Voice ID manually"}
             </label>
             <input
               value={t.elevenManualId}
@@ -532,6 +541,118 @@ function GeminiPanel() {
           ))}
         </select>
       )}
+
+      <label className="block text-sm font-semibold">
+        {isAr ? "اسم الصوت (Voice)" : "Voice name"}
+      </label>
+      <select
+        value={t.geminiVoice}
+        onChange={(e) => t.setGeminiVoice(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      >
+        {GEMINI_VOICES.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+
+      <details className="rounded-xl border border-border p-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="block text-sm font-semibold">
+              {isAr ? "وصف المشهد أو الأسلوب (اختياري)" : "Scene / style description (optional)"}
+            </label>
+            <input
+              type="text"
+              value={t.geminiScene}
+              onChange={(e) => t.setGeminiScene(e.target.value)}
+              placeholder={
+                isAr
+                  ? "مثال: صوت هادئ وواثق في نشرة أخبار مسائية"
+                  : "e.g. calm confident voice, evening news broadcast"
+              }
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+              {GEMINI_SCENE_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  onClick={() => t.setGeminiScene(t.geminiScene === chip.value ? "" : chip.value)}
+                  className={`rounded-full border px-3 py-1 text-xs transition ${
+                    t.geminiScene === chip.value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-accent"
+                  }`}
+                >
+                  {isAr ? chip.ar : chip.en}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label className="block text-sm font-semibold">{isAr ? "الأسلوب" : "Style"}</label>
+              <select
+                value={t.geminiStyle}
+                onChange={(e) => t.setGeminiStyle(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+              >
+                {GEMINI_STYLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {isAr ? o.ar : o.en}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold">{isAr ? "الإيقاع" : "Pace"}</label>
+              <select
+                value={t.geminiPace}
+                onChange={(e) => t.setGeminiPace(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+              >
+                {GEMINI_PACE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {isAr ? o.ar : o.en}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold">{isAr ? "اللكنة" : "Accent"}</label>
+              <select
+                value={t.geminiAccent}
+                onChange={(e) => t.setGeminiAccent(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+              >
+                {GEMINI_ACCENT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {isAr ? o.ar : o.en}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى Google عند الاستماع فقط — لن يظهر لك مرة أخرى بعد إغلاق الصفحة."
+              : "Your key isn't saved anywhere and goes straight to Google only when you press Listen — it disappears once you close this page."}
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "لا تملك مفتاحًا؟ أنشئ واحدًا مجانًا من aistudio.google.com ← Get API Key."
+              : "No key yet? Get a free one at aistudio.google.com → Get API Key."}
+          </p>
+        </div>
+      </details>
+
       <p className="text-xs leading-relaxed text-muted-foreground">
         {isAr
           ? "المفتاح يُستخدم مباشرة من متصفحك ولا يمر بأي خادم."
@@ -541,19 +662,85 @@ function GeminiPanel() {
   );
 }
 
+const GEMINI_VOICES = [
+  "Zephyr",
+  "Puck",
+  "Charon",
+  "Kore",
+  "Fenrir",
+  "Leda",
+  "Orus",
+  "Aoede",
+  "Callirrhoe",
+  "Autonoe",
+  "Enceladus",
+  "Iapetus",
+  "Umbriel",
+  "Algieba",
+  "Despina",
+  "Erinome",
+  "Algenib",
+  "Rasalgethi",
+  "Laomedeia",
+  "Achernar",
+  "Alnilam",
+  "Schedar",
+  "Gacrux",
+  "Pulcherrima",
+  "Achird",
+  "Zubenelgenubi",
+  "Vindemiatrix",
+  "Sadachbia",
+  "Sadaltager",
+  "Sulafat",
+];
+
+const GEMINI_SCENE_CHIPS = [
+  { value: "بصوت هادئ ومهني وواثق", ar: "هادئ ومهني", en: "Calm & professional" },
+  {
+    value: "بصوت حماسي وسريع الإيقاع، زي إعلان تجاري",
+    ar: "إعلان حماسي",
+    en: "Excited ad",
+  },
+  {
+    value: "بصوت دافئ وبطيء وحنون، زي قصة قبل النوم لطفل",
+    ar: "قصة أطفال",
+    en: "Bedtime story",
+  },
+  { value: "بصوت رسمي وواضح، زي مذيع نشرة أخبار", ar: "نشرة أخبار", en: "News anchor" },
+];
+
+const GEMINI_STYLE_OPTIONS = [
+  { value: "", ar: "بدون تحديد", en: "None" },
+  { value: "Empathetic", ar: "متعاطف", en: "Empathetic" },
+  { value: "Cheerful", ar: "مرح", en: "Cheerful" },
+  { value: "Calm", ar: "هادئ", en: "Calm" },
+  { value: "Serious", ar: "جاد", en: "Serious" },
+  { value: "Excited", ar: "متحمس", en: "Excited" },
+  { value: "Sad", ar: "حزين", en: "Sad" },
+  { value: "Whispering", ar: "هامس", en: "Whispering" },
+];
+
+const GEMINI_PACE_OPTIONS = [
+  { value: "", ar: "بدون تحديد", en: "None" },
+  { value: "Slow", ar: "بطيء", en: "Slow" },
+  { value: "Natural", ar: "طبيعي", en: "Natural" },
+  { value: "Fast", ar: "سريع", en: "Fast" },
+];
+
+const GEMINI_ACCENT_OPTIONS = [
+  { value: "", ar: "بدون تحديد", en: "None" },
+  { value: "Egyptian Arabic", ar: "مصرية", en: "Egyptian Arabic" },
+  { value: "Gulf Arabic", ar: "خليجية", en: "Gulf Arabic" },
+  { value: "Levantine Arabic", ar: "شامية", en: "Levantine Arabic" },
+  { value: "Standard Arabic", ar: "فصحى", en: "Standard Arabic" },
+  { value: "American English", ar: "أمريكية", en: "American English" },
+  { value: "British English", ar: "بريطانية", en: "British English" },
+];
+
 function Controls() {
-  const {
-    speak,
-    pause,
-    resume,
-    stop,
-    download,
-    status,
-    errorMsg,
-    lastAudioUrl,
-    engine,
-    locale,
-  } = useTTS();
+  const { speak, pause, resume, stop, download, status, errorMsg, lastAudioUrl, engine, locale } =
+    useTTS();
   const isAr = locale === "ar";
   const label =
     status === "loading"
@@ -573,20 +760,18 @@ function Controls() {
               ? "إيقاف"
               : "Stopped"
             : status === "error"
-            ? isAr
-              ? "خطأ"
-              : "Error"
-            : isAr
-              ? "جاهز"
-              : "Ready";
+              ? isAr
+                ? "خطأ"
+                : "Error"
+              : isAr
+                ? "جاهز"
+                : "Ready";
 
   return (
     <div className="mt-8 flex flex-col items-center gap-3">
       <div className="flex flex-wrap justify-center gap-2">
         <button
-          onClick={() =>
-            status === "paused" ? resume() : status === "playing" ? null : speak()
-          }
+          onClick={() => (status === "paused" ? resume() : status === "playing" ? null : speak())}
           disabled={status === "loading"}
           className="rounded-full bg-gold px-6 py-3 text-base font-bold text-gold-foreground shadow-lg transition hover:opacity-90 disabled:opacity-60"
         >
@@ -660,17 +845,12 @@ function HowItWorks() {
       <div className="mx-auto mt-3 h-1 w-16 rounded-full bg-gold" />
       <ol className="mt-8 grid gap-4 sm:grid-cols-3">
         {steps.map((s, i) => (
-          <li
-            key={i}
-            className="rounded-2xl border border-border bg-card p-5 shadow-sm"
-          >
+          <li key={i} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
               {i + 1}
             </div>
             <h3 className="mt-3 text-base font-bold">{s.t}</h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              {s.d}
-            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
           </li>
         ))}
       </ol>
@@ -679,7 +859,6 @@ function HowItWorks() {
 }
 
 function Footer() {
-
   const { locale } = useTTS();
   return (
     <p className="mt-10 text-center text-xs text-muted-foreground">
