@@ -771,7 +771,6 @@ function Controls() {
     <div className="mt-8 flex flex-col items-center gap-3">
       <div className="flex flex-wrap justify-center gap-2">
         <button
-          <button
   onClick={() => speak()}
   disabled={status === "loading"}
   className="rounded-full bg-gold px-6 py-3 text-base font-bold text-gold-foreground shadow-lg transition hover:opacity-90 disabled:opacity-60"
