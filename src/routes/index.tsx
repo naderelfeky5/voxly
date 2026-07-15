@@ -289,33 +289,31 @@ function Sliders() {
 
 function EngineTabs() {
   const { engine, setEngine, locale } = useTTS();
-  const tabs: { id: typeof engine; ar: string; en: string }[] = [
+  const options: { id: typeof engine; ar: string; en: string }[] = [
     { id: "browser", ar: "صوت المتصفح (مجاني)", en: "Browser voice (free)" },
-    {
-      id: "elevenlabs",
-      ar: "ElevenLabs",
-      en: "High quality (ElevenLabs)",
-    },
+    { id: "elevenlabs", ar: "ElevenLabs", en: "ElevenLabs" },
     { id: "gemini", ar: "Google Gemini TTS", en: "Google Gemini TTS" },
+    { id: "openai", ar: "OpenAI TTS", en: "OpenAI TTS" },
+    { id: "easyvoice", ar: "EasyVoice", en: "EasyVoice" },
+    { id: "azure", ar: "Microsoft Azure TTS", en: "Microsoft Azure TTS" },
+    { id: "polly", ar: "Amazon Polly", en: "Amazon Polly" },
   ];
   return (
-    <div className="mt-8 flex flex-wrap gap-2 rounded-2xl bg-muted p-1.5">
-      {tabs.map((t) => {
-        const active = engine === t.id;
-        return (
-          <button
-            key={t.id}
-            onClick={() => setEngine(t.id)}
-            className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-              active
-                ? "bg-card text-foreground shadow"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {locale === "ar" ? t.ar : t.en}
-          </button>
-        );
-      })}
+    <div className="mt-8">
+      <label className="mb-1.5 block text-sm font-semibold">
+        {locale === "ar" ? "محرك الصوت" : "Voice engine"}
+      </label>
+      <select
+        value={engine}
+        onChange={(e) => setEngine(e.target.value as typeof engine)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm font-semibold outline-none focus:border-primary"
+      >
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {locale === "ar" ? o.ar : o.en}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -327,6 +325,10 @@ function EnginePanel() {
       {engine === "browser" && <BrowserPanel />}
       {engine === "elevenlabs" && <ElevenPanel />}
       {engine === "gemini" && <GeminiPanel />}
+      {engine === "openai" && <OpenAIPanel />}
+      {engine === "easyvoice" && <EasyVoicePanel />}
+      {engine === "azure" && <AzurePanel />}
+      {engine === "polly" && <PollyPanel />}
     </div>
   );
 }
@@ -771,28 +773,28 @@ function Controls() {
     <div className="mt-8 flex flex-col items-center gap-3">
       <div className="flex flex-wrap justify-center gap-2">
         <button
-  onClick={() => speak()}
-  disabled={status === "loading"}
-  className="rounded-full bg-gold px-6 py-3 text-base font-bold text-gold-foreground shadow-lg transition hover:opacity-90 disabled:opacity-60"
->
-  ▶ {isAr ? "استمع" : "Listen"}
-</button>
-{status === "paused" ? (
-  <button
-    onClick={resume}
-    className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent"
-  >
-    ▶ {isAr ? "استئناف" : "Resume"}
-  </button>
-) : (
-  <button
-    onClick={pause}
-    disabled={status !== "playing"}
-    className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent disabled:opacity-50"
-  >
-    ‖ {isAr ? "إيقاف مؤقت" : "Pause"}
-  </button>
-)}
+          onClick={() => speak()}
+          disabled={status === "loading"}
+          className="rounded-full bg-gold px-6 py-3 text-base font-bold text-gold-foreground shadow-lg transition hover:opacity-90 disabled:opacity-60"
+        >
+          ▶ {isAr ? "استمع" : "Listen"}
+        </button>
+        {status === "paused" ? (
+          <button
+            onClick={resume}
+            className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent"
+          >
+            ▶ {isAr ? "استئناف" : "Resume"}
+          </button>
+        ) : (
+          <button
+            onClick={pause}
+            disabled={status !== "playing"}
+            className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent disabled:opacity-50"
+          >
+            ‖ {isAr ? "إيقاف مؤقت" : "Pause"}
+          </button>
+        )}
         <button
           onClick={stop}
           className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent"
@@ -875,5 +877,474 @@ function Footer() {
         ? "يعمل بالكامل داخل متصفحك — نصوصك لا تُرسل لأي خادم إلا في أوضاع الصوت عالي الجودة."
         : "Runs entirely in your browser — your text is never sent to a server, except in high-quality voice modes."}
     </p>
+  );
+}
+
+const OPENAI_MODELS = [
+  { value: "gpt-4o-mini-tts", label: "gpt-4o-mini-tts" },
+  { value: "tts-1", label: "tts-1" },
+  { value: "tts-1-hd", label: "tts-1-hd" },
+];
+
+const OPENAI_VOICES = [
+  "alloy",
+  "ash",
+  "ballad",
+  "coral",
+  "echo",
+  "fable",
+  "onyx",
+  "nova",
+  "sage",
+  "shimmer",
+  "verse",
+  "marin",
+  "cedar",
+];
+
+function OpenAIPanel() {
+  const t = useTTS();
+  const isAr = t.locale === "ar";
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold">
+        {isAr ? "مفتاح OpenAI API" : "OpenAI API key"}
+      </label>
+      <input
+        type="password"
+        value={t.openaiKey}
+        onChange={(e) => t.setOpenaiKey(e.target.value)}
+        placeholder="sk-..."
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+
+      <label className="block text-sm font-semibold">{isAr ? "النموذج" : "Model"}</label>
+      <select
+        value={t.openaiModel}
+        onChange={(e) => t.setOpenaiModel(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      >
+        {OPENAI_MODELS.map((m) => (
+          <option key={m.value} value={m.value}>
+            {m.label}
+          </option>
+        ))}
+      </select>
+
+      <label className="block text-sm font-semibold">{isAr ? "الصوت" : "Voice"}</label>
+      <select
+        value={t.openaiVoice}
+        onChange={(e) => t.setOpenaiVoice(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      >
+        {OPENAI_VOICES.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+
+      <details className="rounded-xl border border-border p-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="block text-sm font-semibold">
+              {isAr ? "تعليمات الأسلوب (اختياري)" : "Style instructions (optional)"}
+            </label>
+            <input
+              type="text"
+              value={t.openaiInstructions}
+              onChange={(e) => t.setOpenaiInstructions(e.target.value)}
+              placeholder={
+                isAr ? "مثال: تكلم بحماس وسرعة معتدلة" : "e.g. Speak cheerfully and briskly"
+              }
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isAr
+                ? "يعمل فقط مع نموذج gpt-4o-mini-tts، ولا يعمل مع tts-1 وtts-1-hd."
+                : "Only works with gpt-4o-mini-tts — not supported by tts-1 or tts-1-hd."}
+            </p>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى OpenAI عند الاستماع فقط."
+              : "Your key isn't saved anywhere and goes straight to OpenAI only when you press Listen."}
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "لا تملك مفتاحًا؟ أنشئ حسابًا على platform.openai.com ثم اذهب لـ API keys وأنشئ مفتاحًا جديدًا. الاستخدام مدفوع بالاستهلاك (ليس مجانيًا بالكامل)."
+              : "No key yet? Sign up at platform.openai.com and create one under API keys. Usage is billed per character (no permanent free tier)."}
+          </p>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+const EASYVOICE_VOICES = [
+  "af_aoede",
+  "am_echo",
+  "ar_f1",
+  "ar_f2",
+  "ar_f3",
+  "ar_f4",
+  "ar_f5",
+  "ar_m1",
+  "ar_m2",
+  "ar_m3",
+  "ar_m4",
+  "ar_m5",
+];
+
+const EASYVOICE_TONES = [
+  { value: "", ar: "افتراضي (Neutral)", en: "Default (Neutral)" },
+  { value: "warm", ar: "دافئ", en: "Warm" },
+  { value: "bright", ar: "مشرق", en: "Bright" },
+  { value: "bass", ar: "عميق (Bass)", en: "Bass" },
+];
+
+function EasyVoicePanel() {
+  const t = useTTS();
+  const isAr = t.locale === "ar";
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold">
+        {isAr ? "مفتاح EasyVoice API" : "EasyVoice API key"}
+      </label>
+      <input
+        type="password"
+        value={t.easyvoiceKey}
+        onChange={(e) => t.setEasyvoiceKey(e.target.value)}
+        placeholder="ev_..."
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+
+      <label className="block text-sm font-semibold">{isAr ? "الصوت" : "Voice"}</label>
+      <select
+        value={t.easyvoiceVoice}
+        onChange={(e) => t.setEasyvoiceVoice(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      >
+        {EASYVOICE_VOICES.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+
+      <details className="rounded-xl border border-border p-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="block text-sm font-semibold">{isAr ? "لون الصوت" : "Tone"}</label>
+            <select
+              value={t.easyvoiceTone}
+              onChange={(e) => t.setEasyvoiceTone(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+            >
+              {EASYVOICE_TONES.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {isAr ? o.ar : o.en}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى EasyVoice عند الاستماع فقط."
+              : "Your key isn't saved anywhere and goes straight to EasyVoice only when you press Listen."}
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "لا تملك مفتاحًا؟ سجّل مجانًا على easyvoice.ae/signup واحصل على مفتاح API من إعدادات حسابك."
+              : "No key yet? Sign up for free at easyvoice.ae/signup and grab an API key from your account settings."}
+          </p>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+const AZURE_VOICES = [
+  "ar-EG-SalmaNeural",
+  "ar-EG-ShakirNeural",
+  "ar-SA-HamedNeural",
+  "ar-SA-ZariyahNeural",
+  "en-US-JennyNeural",
+  "en-US-GuyNeural",
+  "en-US-AriaNeural",
+  "en-GB-SoniaNeural",
+  "en-GB-RyanNeural",
+];
+
+const AZURE_REGIONS = [
+  "eastus",
+  "westus",
+  "westus2",
+  "westeurope",
+  "northeurope",
+  "uaenorth",
+  "uksouth",
+  "southeastasia",
+];
+
+const AZURE_STYLES = [
+  { value: "", ar: "بدون تحديد", en: "None" },
+  { value: "cheerful", ar: "مرح", en: "Cheerful" },
+  { value: "sad", ar: "حزين", en: "Sad" },
+  { value: "angry", ar: "غاضب", en: "Angry" },
+  { value: "excited", ar: "متحمس", en: "Excited" },
+  { value: "friendly", ar: "ودود", en: "Friendly" },
+  { value: "whispering", ar: "هامس", en: "Whispering" },
+];
+
+function AzurePanel() {
+  const t = useTTS();
+  const isAr = t.locale === "ar";
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold">
+        {isAr ? "مفتاح Azure API" : "Azure API key"}
+      </label>
+      <input
+        type="password"
+        value={t.azureKey}
+        onChange={(e) => t.setAzureKey(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+
+      <label className="block text-sm font-semibold">{isAr ? "المنطقة (Region)" : "Region"}</label>
+      <input
+        list="azure-regions"
+        value={t.azureRegion}
+        onChange={(e) => t.setAzureRegion(e.target.value)}
+        placeholder="eastus"
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+      <datalist id="azure-regions">
+        {AZURE_REGIONS.map((r) => (
+          <option key={r} value={r} />
+        ))}
+      </datalist>
+
+      <label className="block text-sm font-semibold">{isAr ? "الصوت" : "Voice"}</label>
+      <input
+        list="azure-voices"
+        value={t.azureVoice}
+        onChange={(e) => t.setAzureVoice(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+      <datalist id="azure-voices">
+        {AZURE_VOICES.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+
+      <details className="rounded-xl border border-border p-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="block text-sm font-semibold">{isAr ? "الأسلوب" : "Style"}</label>
+            <select
+              value={t.azureStyle}
+              onChange={(e) => t.setAzureStyle(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+            >
+              {AZURE_STYLES.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {isAr ? o.ar : o.en}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isAr
+                ? "بعض الأصوات لا تدعم كل الأساليب — إذا فشل الطلب جرّب بدون تحديد أسلوب."
+                : "Not every voice supports every style — if the request fails, try leaving this unset."}
+            </p>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى Azure عند الاستماع فقط."
+              : "Your key isn't saved anywhere and goes straight to Azure only when you press Listen."}
+          </p>
+          <div className="text-xs leading-relaxed text-muted-foreground">
+            <p className="font-semibold text-foreground">
+              {isAr ? "طريقة الحصول على المفتاح والمنطقة:" : "How to get your key and region:"}
+            </p>
+            <ol className="mt-1 list-decimal space-y-1 pr-4">
+              <li>
+                {isAr
+                  ? "افتح portal.azure.com وسجّل دخول (أو أنشئ حساب مجاني)."
+                  : "Open portal.azure.com and sign in (or create a free account)."}
+              </li>
+              <li>
+                {isAr
+                  ? "من البحث فوق، اكتب 'Speech services' وأنشئ مورد جديد (Create)."
+                  : "Search for 'Speech services' at the top and click Create."}
+              </li>
+              <li>
+                {isAr
+                  ? "اختر Region (مثلاً eastus) — ده نفس الاسم اللي هتحطه في الحقل فوق."
+                  : "Pick a Region (e.g. eastus) — this is the exact value to paste in the field above."}
+              </li>
+              <li>
+                {isAr
+                  ? "بعد إنشاء المورد، روح لـ 'Keys and Endpoint' وانسخ KEY 1."
+                  : "After the resource is created, go to 'Keys and Endpoint' and copy KEY 1."}
+              </li>
+              <li>
+                {isAr
+                  ? "حساب Azure المجاني بيدّي 500 ألف حرف مجانًا شهريًا للأصوات Neural."
+                  : "The Azure free tier includes 500,000 characters per month for Neural voices."}
+              </li>
+            </ol>
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+const POLLY_REGIONS = ["us-east-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1"];
+const POLLY_ENGINES = [
+  { value: "standard", ar: "عادي (Standard)", en: "Standard" },
+  { value: "neural", ar: "عالي الجودة (Neural)", en: "Neural" },
+  { value: "long-form", ar: "نصوص طويلة (Long-Form)", en: "Long-Form" },
+  { value: "generative", ar: "توليدي (Generative)", en: "Generative" },
+];
+const POLLY_VOICES = ["Zeina", "Joanna", "Matthew", "Ivy", "Kendra", "Amy", "Brian"];
+
+function PollyPanel() {
+  const t = useTTS();
+  const isAr = t.locale === "ar";
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold">
+        {isAr ? "AWS Access Key ID" : "AWS Access Key ID"}
+      </label>
+      <input
+        type="password"
+        value={t.pollyAccessKey}
+        onChange={(e) => t.setPollyAccessKey(e.target.value)}
+        placeholder="AKIA..."
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+
+      <label className="block text-sm font-semibold">
+        {isAr ? "AWS Secret Access Key" : "AWS Secret Access Key"}
+      </label>
+      <input
+        type="password"
+        value={t.pollySecretKey}
+        onChange={(e) => t.setPollySecretKey(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+
+      <label className="block text-sm font-semibold">{isAr ? "المنطقة (Region)" : "Region"}</label>
+      <input
+        list="polly-regions"
+        value={t.pollyRegion}
+        onChange={(e) => t.setPollyRegion(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+      <datalist id="polly-regions">
+        {POLLY_REGIONS.map((r) => (
+          <option key={r} value={r} />
+        ))}
+      </datalist>
+
+      <label className="block text-sm font-semibold">{isAr ? "الصوت" : "Voice"}</label>
+      <input
+        list="polly-voices"
+        value={t.pollyVoice}
+        onChange={(e) => t.setPollyVoice(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+      <datalist id="polly-voices">
+        {POLLY_VOICES.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <p className="text-xs text-muted-foreground">
+        {isAr
+          ? "Zeina هو الصوت العربي المتاح، ويعمل فقط مع نوع المحرك Standard."
+          : "Zeina is the Arabic voice, and only works with the Standard engine type."}
+      </p>
+
+      <details className="rounded-xl border border-border p-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="block text-sm font-semibold">
+              {isAr ? "نوع المحرك" : "Engine type"}
+            </label>
+            <select
+              value={t.pollyEngine}
+              onChange={(e) => t.setPollyEngine(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+            >
+              {POLLY_ENGINES.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {isAr ? o.ar : o.en}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="rounded-lg bg-destructive/10 p-2 text-xs leading-relaxed text-destructive">
+            {isAr
+              ? "تنبيه أمان: مفاتيح AWS أخطر من مفاتيح باقي المحركات، لأنها ممكن تدي صلاحيات على حسابك كله لو معملتلهاش تقييد. اتبع الخطوات تحت بالظبط لإنشاء مفتاح مقيّد بخدمة Polly فقط."
+              : "Security note: AWS keys are riskier than other engines' keys — an unrestricted key can control your whole account. Follow the steps below exactly to create a key scoped to Polly only."}
+          </p>
+          <div className="text-xs leading-relaxed text-muted-foreground">
+            <p className="font-semibold text-foreground">
+              {isAr
+                ? "طريقة إنشاء مفتاح آمن مقيّد بـ Polly فقط:"
+                : "Creating a Polly-only key safely:"}
+            </p>
+            <ol className="mt-1 list-decimal space-y-1 pr-4">
+              <li>
+                {isAr
+                  ? "افتح console.aws.amazon.com وسجّل دخول (أو أنشئ حسابًا مجانيًا)."
+                  : "Open console.aws.amazon.com and sign in (or create a free account)."}
+              </li>
+              <li>
+                {isAr
+                  ? "من البحث فوق، اكتب 'IAM' وادخل عليها."
+                  : "Search for 'IAM' at the top and open it."}
+              </li>
+              <li>
+                {isAr
+                  ? "من القائمة الجانبية Users → Create user، واختار اسم مثل voxly-polly."
+                  : "In the sidebar go to Users → Create user, and give it a name like voxly-polly."}
+              </li>
+              <li>
+                {isAr
+                  ? "في خطوة الصلاحيات، اختر 'Attach policies directly' وابحث عن AmazonPollyReadOnlyAccess وحددها (تكفي للتحويل النصي للصوت فقط)."
+                  : "At the permissions step, choose 'Attach policies directly', search for AmazonPollyReadOnlyAccess, and select it (enough for text-to-speech only)."}
+              </li>
+              <li>
+                {isAr
+                  ? "بعد إنشاء المستخدم، افتحه → Security credentials → Create access key → اختر 'Application running outside AWS'."
+                  : "After creating the user, open it → Security credentials → Create access key → choose 'Application running outside AWS'."}
+              </li>
+              <li>
+                {isAr
+                  ? "انسخ Access Key ID وSecret Access Key فورًا (السر ما بيتشافش تاني بعد كده)."
+                  : "Copy the Access Key ID and Secret Access Key immediately — the secret won't be shown again."}
+              </li>
+            </ol>
+          </div>
+        </div>
+      </details>
+    </div>
   );
 }
