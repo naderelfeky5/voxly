@@ -14,7 +14,7 @@ import { updateFavicon } from "../lib/utils";
 export type Engine = "browser" | "elevenlabs" | "gemini";
 export type Locale = "ar" | "en";
 export type Theme = "light" | "dark";
-export type Status = "idle" | "loading" | "playing" | "paused" | "error";
+export type Status = "idle" | "loading" | "playing" | "paused" | "stopped" | "error";
 
 type BrowserVoice = { name: string; lang: string; voiceURI: string };
 
@@ -203,7 +203,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    setStatus("idle");
+    setStatus("stopped");
   }, []);
 
   const pause = useCallback(() => {
@@ -242,7 +242,8 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     u.volume = volume;
     utterRef.current = u;
     u.onend = () => setStatus("idle");
-    u.onerror = () => {
+    u.onerror = (e) => {
+      if (e.error === "canceled" || e.error === "interrupted") return;
       setStatus("error");
       setErrorMsg("خطأ أثناء التشغيل");
     };
