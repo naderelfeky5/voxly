@@ -771,19 +771,29 @@ function Controls() {
     <div className="mt-8 flex flex-col items-center gap-3">
       <div className="flex flex-wrap justify-center gap-2">
         <button
-          onClick={() => (status === "paused" ? resume() : status === "playing" ? null : speak())}
-          disabled={status === "loading"}
-          className="rounded-full bg-gold px-6 py-3 text-base font-bold text-gold-foreground shadow-lg transition hover:opacity-90 disabled:opacity-60"
-        >
-          ▶ {isAr ? "استمع" : "Listen"}
-        </button>
-        <button
-          onClick={pause}
-          disabled={status !== "playing"}
-          className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent disabled:opacity-50"
-        >
-          ‖ {isAr ? "إيقاف مؤقت" : "Pause"}
-        </button>
+          <button
+  onClick={() => speak()}
+  disabled={status === "loading"}
+  className="rounded-full bg-gold px-6 py-3 text-base font-bold text-gold-foreground shadow-lg transition hover:opacity-90 disabled:opacity-60"
+>
+  ▶ {isAr ? "استمع" : "Listen"}
+</button>
+{status === "paused" ? (
+  <button
+    onClick={resume}
+    className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent"
+  >
+    ▶ {isAr ? "استئناف" : "Resume"}
+  </button>
+) : (
+  <button
+    onClick={pause}
+    disabled={status !== "playing"}
+    className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent disabled:opacity-50"
+  >
+    ‖ {isAr ? "إيقاف مؤقت" : "Pause"}
+  </button>
+)}
         <button
           onClick={stop}
           className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-accent"
