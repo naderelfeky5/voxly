@@ -568,7 +568,11 @@ function Controls() {
           ? isAr
             ? "متوقف مؤقتًا"
             : "Paused"
-          : status === "error"
+          : status === "stopped"
+            ? isAr
+              ? "إيقاف"
+              : "Stopped"
+            : status === "error"
             ? isAr
               ? "خطأ"
               : "Error"
