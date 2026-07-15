@@ -293,7 +293,7 @@ function EngineTabs() {
     { id: "browser", ar: "صوت المتصفح (مجاني)", en: "Browser voice (free)" },
     {
       id: "elevenlabs",
-      ar: "صوت عالي الجودة (ElevenLabs)",
+      ar: "ElevenLabs",
       en: "High quality (ElevenLabs)",
     },
     { id: "gemini", ar: "Google Gemini TTS", en: "Google Gemini TTS" },
