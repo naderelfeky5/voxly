@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useTTS } from "@/contexts/tts-context";
 
 export const Route = createFileRoute("/")({
+  ssr: false,
   component: Index,
 });
 
@@ -23,7 +24,7 @@ function Index() {
 }
 
 function Header() {
-  const { locale, setLocale, theme, toggleTheme } = useTTS();
+  const { locale, setLocale, toggleTheme } = useTTS();
   return (
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-5 sm:flex sm:justify-between">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -36,7 +37,8 @@ function Header() {
           aria-label="toggle theme"
           className="grid size-9 place-items-center rounded-full border border-border bg-card text-base shadow-sm transition hover:bg-accent"
         >
-          {theme === "light" ? "🌙" : "☀️"}
+          <span className="dark:hidden">🌙</span>
+          <span className="hidden dark:inline">☀️</span>
         </button>
         <button
           onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
@@ -306,10 +308,10 @@ function EngineTabs() {
       <select
         value={engine}
         onChange={(e) => setEngine(e.target.value as typeof engine)}
-        className="w-full rounded-xl border border-border bg-background p-3 text-sm font-semibold outline-none focus:border-primary"
+        className="w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-bold text-primary outline-none focus:border-primary"
       >
         {options.map((o) => (
-          <option key={o.id} value={o.id}>
+          <option key={o.id} value={o.id} className="bg-background font-semibold text-foreground">
             {locale === "ar" ? o.ar : o.en}
           </option>
         ))}
@@ -334,13 +336,14 @@ function EnginePanel() {
 }
 
 function BrowserPanel() {
-  const { browserVoices, browserVoiceURI, setBrowserVoiceURI, locale } = useTTS();
+  const { browserVoices, browserVoicesReady, browserVoiceURI, setBrowserVoiceURI, locale } =
+    useTTS();
   return (
     <div>
       <label className="mb-1.5 block text-sm font-semibold">
         {locale === "ar" ? "الصوت" : "Voice"}
       </label>
-      {browserVoices.length === 0 ? (
+      {!browserVoicesReady ? null : browserVoices.length === 0 ? (
         <p className="rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
           {locale === "ar"
             ? "لا توجد أصوات متاحة في متصفحك لهذه اللغة."
@@ -902,6 +905,21 @@ const OPENAI_VOICES = [
   "cedar",
 ];
 
+const OPENAI_INSTRUCTION_CHIPS = [
+  { value: "Speak in a calm, professional tone", ar: "هادئ ومهني", en: "Calm & professional" },
+  {
+    value: "Speak excitedly and briskly, like a commercial ad",
+    ar: "إعلان حماسي",
+    en: "Excited ad",
+  },
+  {
+    value: "Speak warmly and slowly, like a bedtime story for a child",
+    ar: "قصة أطفال",
+    en: "Bedtime story",
+  },
+  { value: "Speak formally and clearly, like a news anchor", ar: "نشرة أخبار", en: "News anchor" },
+];
+
 function OpenAIPanel() {
   const t = useTTS();
   const isAr = t.locale === "ar";
@@ -962,6 +980,24 @@ function OpenAIPanel() {
               }
               className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
             />
+            <div className="mt-2 flex flex-wrap gap-2">
+              {OPENAI_INSTRUCTION_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  onClick={() =>
+                    t.setOpenaiInstructions(t.openaiInstructions === chip.value ? "" : chip.value)
+                  }
+                  className={`rounded-full border px-3 py-1 text-xs transition ${
+                    t.openaiInstructions === chip.value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-accent"
+                  }`}
+                >
+                  {isAr ? chip.ar : chip.en}
+                </button>
+              ))}
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {isAr
                 ? "يعمل فقط مع نموذج gpt-4o-mini-tts، ولا يعمل مع tts-1 وtts-1-hd."
@@ -1054,6 +1090,22 @@ function EasyVoicePanel() {
               ))}
             </select>
           </div>
+          <Slider
+            label={isAr ? "طبقة الصوت" : "Pitch"}
+            value={t.easyvoicePitch}
+            min={-4}
+            max={4}
+            step={0.5}
+            onChange={t.setEasyvoicePitch}
+          />
+          <Slider
+            label={isAr ? "مستوى الصوت (ديسيبل)" : "Volume (dB)"}
+            value={t.easyvoiceVolumeDb}
+            min={-6}
+            max={6}
+            step={0.5}
+            onChange={t.setEasyvoiceVolumeDb}
+          />
           <p className="text-xs leading-relaxed text-muted-foreground">
             {isAr
               ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى EasyVoice عند الاستماع فقط."
@@ -1071,15 +1123,29 @@ function EasyVoicePanel() {
 }
 
 const AZURE_VOICES = [
-  "ar-EG-SalmaNeural",
-  "ar-EG-ShakirNeural",
-  "ar-SA-HamedNeural",
-  "ar-SA-ZariyahNeural",
-  "en-US-JennyNeural",
-  "en-US-GuyNeural",
-  "en-US-AriaNeural",
-  "en-GB-SoniaNeural",
-  "en-GB-RyanNeural",
+  { id: "ar-EG-SalmaNeural", ar: "سلمى — عربي (مصر)", en: "Salma — Arabic (Egypt)" },
+  { id: "ar-EG-ShakirNeural", ar: "شاكر — عربي (مصر)", en: "Shakir — Arabic (Egypt)" },
+  { id: "ar-SA-HamedNeural", ar: "حامد — عربي (السعودية)", en: "Hamed — Arabic (Saudi Arabia)" },
+  {
+    id: "ar-SA-ZariyahNeural",
+    ar: "زارية — عربي (السعودية)",
+    en: "Zariyah — Arabic (Saudi Arabia)",
+  },
+  { id: "en-US-JennyNeural", ar: "Jenny — إنجليزي (أمريكا)", en: "Jenny — English (US)" },
+  { id: "en-US-GuyNeural", ar: "Guy — إنجليزي (أمريكا)", en: "Guy — English (US)" },
+  { id: "en-US-AriaNeural", ar: "Aria — إنجليزي (أمريكا)", en: "Aria — English (US)" },
+  { id: "en-GB-SoniaNeural", ar: "Sonia — إنجليزي (بريطانيا)", en: "Sonia — English (UK)" },
+  { id: "en-GB-RyanNeural", ar: "Ryan — إنجليزي (بريطانيا)", en: "Ryan — English (UK)" },
+];
+
+const AZURE_ROLES = [
+  { value: "", ar: "بدون تحديد", en: "None" },
+  { value: "YoungAdultFemale", ar: "أنثى — شابة", en: "Young adult female" },
+  { value: "YoungAdultMale", ar: "ذكر — شاب", en: "Young adult male" },
+  { value: "OlderAdultFemale", ar: "أنثى — أكبر سنًا", en: "Older adult female" },
+  { value: "OlderAdultMale", ar: "ذكر — أكبر سنًا", en: "Older adult male" },
+  { value: "Girl", ar: "طفلة", en: "Girl" },
+  { value: "Boy", ar: "طفل", en: "Boy" },
 ];
 
 const AZURE_REGIONS = [
@@ -1133,17 +1199,17 @@ function AzurePanel() {
       </datalist>
 
       <label className="block text-sm font-semibold">{isAr ? "الصوت" : "Voice"}</label>
-      <input
-        list="azure-voices"
+      <select
         value={t.azureVoice}
         onChange={(e) => t.setAzureVoice(e.target.value)}
         className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
-      />
-      <datalist id="azure-voices">
+      >
         {AZURE_VOICES.map((v) => (
-          <option key={v} value={v} />
+          <option key={v.id} value={v.id}>
+            {isAr ? v.ar : v.en} — {v.id}
+          </option>
         ))}
-      </datalist>
+      </select>
 
       <details className="rounded-xl border border-border p-3">
         <summary className="cursor-pointer text-sm font-semibold">
@@ -1167,6 +1233,37 @@ function AzurePanel() {
               {isAr
                 ? "بعض الأصوات لا تدعم كل الأساليب — إذا فشل الطلب جرّب بدون تحديد أسلوب."
                 : "Not every voice supports every style — if the request fails, try leaving this unset."}
+            </p>
+          </div>
+          {t.azureStyle && (
+            <Slider
+              label={isAr ? "قوة الأسلوب" : "Style intensity"}
+              value={t.azureStyleDegree}
+              min={0.01}
+              max={2}
+              step={0.01}
+              onChange={t.setAzureStyleDegree}
+            />
+          )}
+          <div>
+            <label className="block text-sm font-semibold">
+              {isAr ? "الشخصية (Role)" : "Role"}
+            </label>
+            <select
+              value={t.azureRole}
+              onChange={(e) => t.setAzureRole(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+            >
+              {AZURE_ROLES.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {isAr ? o.ar : o.en}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isAr
+                ? "تخلي الصوت يقلّد فئة عمرية/جنس مختلف — مدعوم في بعض الأصوات الصينية والإنجليزية بس."
+                : "Makes the voice mimic a different age/gender — only supported by some Chinese and English voices."}
             </p>
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground">

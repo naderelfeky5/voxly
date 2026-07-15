@@ -44,6 +44,7 @@ interface TTSState {
 
   // browser voices
   browserVoices: BrowserVoice[];
+  browserVoicesReady: boolean;
   browserVoiceURI: string;
   setBrowserVoiceURI: (v: string) => void;
 
@@ -100,6 +101,10 @@ interface TTSState {
   setEasyvoiceVoice: (v: string) => void;
   easyvoiceTone: string;
   setEasyvoiceTone: (v: string) => void;
+  easyvoicePitch: number;
+  setEasyvoicePitch: (v: number) => void;
+  easyvoiceVolumeDb: number;
+  setEasyvoiceVolumeDb: (v: number) => void;
 
   // azure
   azureKey: string;
@@ -110,6 +115,10 @@ interface TTSState {
   setAzureVoice: (v: string) => void;
   azureStyle: string;
   setAzureStyle: (v: string) => void;
+  azureStyleDegree: number;
+  setAzureStyleDegree: (v: number) => void;
+  azureRole: string;
+  setAzureRole: (v: string) => void;
 
   // polly
   pollyAccessKey: string;
@@ -161,6 +170,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [volume, setVolume] = useState(1);
 
   const [browserVoices, setBrowserVoices] = useState<BrowserVoice[]>([]);
+  const [browserVoicesReady, setBrowserVoicesReady] = useState(false);
   const [browserVoiceURI, setBrowserVoiceURI] = useState("");
 
   const [elevenKey, setElevenKey] = useState("");
@@ -189,11 +199,15 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [easyvoiceKey, setEasyvoiceKey] = useState("");
   const [easyvoiceVoice, setEasyvoiceVoice] = useState("af_aoede");
   const [easyvoiceTone, setEasyvoiceTone] = useState("");
+  const [easyvoicePitch, setEasyvoicePitch] = useState(0);
+  const [easyvoiceVolumeDb, setEasyvoiceVolumeDb] = useState(0);
 
   const [azureKey, setAzureKey] = useState("");
   const [azureRegion, setAzureRegion] = useState("eastus");
   const [azureVoice, setAzureVoice] = useState("ar-EG-SalmaNeural");
   const [azureStyle, setAzureStyle] = useState("");
+  const [azureStyleDegree, setAzureStyleDegree] = useState(1);
+  const [azureRole, setAzureRole] = useState("");
 
   const [pollyAccessKey, setPollyAccessKey] = useState("");
   const [pollySecretKey, setPollySecretKey] = useState("");
@@ -237,6 +251,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   // load browser voices
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    let settled = false;
     const load = () => {
       const list = window.speechSynthesis.getVoices().map((v) => ({
         name: v.name,
@@ -244,9 +259,19 @@ export function TTSProvider({ children }: { children: ReactNode }) {
         voiceURI: v.voiceURI,
       }));
       setBrowserVoices(list);
+      if (list.length > 0) {
+        settled = true;
+        setBrowserVoicesReady(true);
+      }
     };
     load();
     window.speechSynthesis.onvoiceschanged = load;
+    // Some browsers genuinely have no voices for a locale — don't show the
+    // "no voices" message until we've given getVoices() a fair chance.
+    const timer = setTimeout(() => {
+      if (!settled) setBrowserVoicesReady(true);
+    }, 800);
+    return () => clearTimeout(timer);
   }, []);
 
   const filteredBrowserVoices = useMemo(() => {
@@ -502,6 +527,8 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       voice: easyvoiceVoice || "af_aoede",
     };
     if (easyvoiceTone && easyvoiceTone !== "neutral") body.ev_tone = easyvoiceTone;
+    if (easyvoicePitch !== 0) body.ev_pitch = easyvoicePitch;
+    if (easyvoiceVolumeDb !== 0) body.ev_volume_db = easyvoiceVolumeDb;
     const res = await fetch("https://easyvoice.ae/api/v1/audio/speech", {
       method: "POST",
       headers: {
@@ -521,7 +548,17 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       audioRef.current.volume = volume;
     }
     setStatus("playing");
-  }, [easyvoiceKey, easyvoiceVoice, easyvoiceTone, text, playAudioBlob, rate, volume]);
+  }, [
+    easyvoiceKey,
+    easyvoiceVoice,
+    easyvoiceTone,
+    easyvoicePitch,
+    easyvoiceVolumeDb,
+    text,
+    playAudioBlob,
+    rate,
+    volume,
+  ]);
 
   const speakAzure = useCallback(async () => {
     if (!azureKey) throw new Error("أدخل مفتاح Azure API");
@@ -529,8 +566,11 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     const voice = azureVoice || "ar-EG-SalmaNeural";
     const lang = voice.split("-").slice(0, 2).join("-");
     const escaped = escapeXml(text);
+    const expressAttrs = azureStyle
+      ? ` style="${azureStyle}"${azureStyleDegree !== 1 ? ` styledegree="${azureStyleDegree}"` : ""}${azureRole ? ` role="${azureRole}"` : ""}`
+      : "";
     const voiceContent = azureStyle
-      ? `<mstts:express-as style="${azureStyle}">${escaped}</mstts:express-as>`
+      ? `<mstts:express-as${expressAttrs}>${escaped}</mstts:express-as>`
       : escaped;
     const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${lang}"><voice name="${voice}">${voiceContent}</voice></speak>`;
     setStatus("loading");
@@ -554,7 +594,18 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       audioRef.current.volume = volume;
     }
     setStatus("playing");
-  }, [azureKey, azureRegion, azureVoice, azureStyle, text, playAudioBlob, rate, volume]);
+  }, [
+    azureKey,
+    azureRegion,
+    azureVoice,
+    azureStyle,
+    azureStyleDegree,
+    azureRole,
+    text,
+    playAudioBlob,
+    rate,
+    volume,
+  ]);
 
   // Amazon Polly requires each request to be signed (AWS SigV4) — done entirely
   // in the browser using Web Crypto, no server involved.
@@ -676,6 +727,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     volume,
     setVolume,
     browserVoices: filteredBrowserVoices,
+    browserVoicesReady,
     browserVoiceURI,
     setBrowserVoiceURI,
     elevenKey,
@@ -724,6 +776,10 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setEasyvoiceVoice,
     easyvoiceTone,
     setEasyvoiceTone,
+    easyvoicePitch,
+    setEasyvoicePitch,
+    easyvoiceVolumeDb,
+    setEasyvoiceVolumeDb,
     azureKey,
     setAzureKey,
     azureRegion,
@@ -732,6 +788,10 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setAzureVoice,
     azureStyle,
     setAzureStyle,
+    azureStyleDegree,
+    setAzureStyleDegree,
+    azureRole,
+    setAzureRole,
     pollyAccessKey,
     setPollyAccessKey,
     pollySecretKey,
