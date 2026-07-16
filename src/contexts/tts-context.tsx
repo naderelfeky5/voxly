@@ -17,7 +17,8 @@ export type Theme = "light" | "dark";
 export type Status = "idle" | "loading" | "playing" | "paused" | "stopped" | "error";
 
 type BrowserVoice = { name: string; lang: string; voiceURI: string };
-type CambVoice = { id: number; voice_name: string; gender?: string; language?: string };
+type CambVoice = { id: number; voice_name: string; gender?: number; language?: number };
+type CambLanguage = { id: number; language: string; short_name?: string };
 
 interface TTSState {
   // ui
@@ -87,14 +88,18 @@ interface TTSState {
   // camb.ai
   cambKey: string;
   setCambKey: (v: string) => void;
+  cambLanguages: CambLanguage[];
+  loadCambLanguages: () => Promise<void>;
+  cambLanguageId: string;
+  setCambLanguageId: (v: string) => void;
   cambVoices: CambVoice[];
   cambVoiceId: string;
   setCambVoiceId: (v: string) => void;
   loadCambVoices: () => Promise<void>;
-  cambLanguage: string;
-  setCambLanguage: (v: string) => void;
   cambSpeechModel: string;
   setCambSpeechModel: (v: string) => void;
+  cambSpeakingRate: number;
+  setCambSpeakingRate: (v: number) => void;
   cambUserInstructions: string;
   setCambUserInstructions: (v: string) => void;
 
@@ -184,10 +189,12 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [geminiAccent, setGeminiAccent] = useState("");
 
   const [cambKey, setCambKey] = useState("");
+  const [cambLanguages, setCambLanguages] = useState<CambLanguage[]>([]);
+  const [cambLanguageId, setCambLanguageId] = useState("");
   const [cambVoices, setCambVoices] = useState<CambVoice[]>([]);
   const [cambVoiceId, setCambVoiceId] = useState("");
-  const [cambLanguage, setCambLanguage] = useState("ar-eg");
   const [cambSpeechModel, setCambSpeechModel] = useState("mars-8.1-flash-beta");
+  const [cambSpeakingRate, setCambSpeakingRate] = useState(1);
   const [cambUserInstructions, setCambUserInstructions] = useState("");
 
   const [azureKey, setAzureKey] = useState("");
@@ -474,6 +481,19 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!geminiModel) setGeminiModel(list[0]);
   }, [geminiKey, geminiModel]);
 
+  const loadCambLanguages = useCallback(async () => {
+    if (!cambKey) throw new Error("أدخل المفتاح أولاً");
+    const res = await fetch("https://client.camb.ai/apis/source-languages", {
+      headers: { "x-api-key": cambKey, Accept: "application/json" },
+    });
+    if (!res.ok) throw new Error("فشل تحميل اللغات");
+    const data = (await res.json()) as CambLanguage[];
+    setCambLanguages(data || []);
+    const arabic = data?.find((l) => /arabic/i.test(l.language));
+    if (arabic) setCambLanguageId(String(arabic.id));
+    else if (data?.[0]) setCambLanguageId(String(data[0].id));
+  }, [cambKey]);
+
   const loadCambVoices = useCallback(async () => {
     if (!cambKey) throw new Error("أدخل المفتاح أولاً");
     const res = await fetch("https://client.camb.ai/apis/list-voices", {
@@ -482,18 +502,23 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error("فشل تحميل الأصوات");
     const data = (await res.json()) as CambVoice[];
     setCambVoices(data || []);
-    if (data?.[0]) setCambVoiceId(String(data[0].id));
-  }, [cambKey]);
+    const firstMatch = cambLanguageId
+      ? data?.find((v) => String(v.language) === cambLanguageId)
+      : data?.[0];
+    if (firstMatch) setCambVoiceId(String(firstMatch.id));
+  }, [cambKey, cambLanguageId]);
 
   const speakCamb = useCallback(async () => {
     if (!cambKey) throw new Error("أدخل مفتاح CAMB.AI API");
+    if (!cambLanguageId) throw new Error("اختر لغة أولًا (حمّل اللغات المتاحة)");
     if (!cambVoiceId) throw new Error("اختر صوتًا أولًا (حمّل الأصوات المتاحة)");
     setStatus("loading");
     const body: Record<string, unknown> = {
       text,
       voice_id: Number(cambVoiceId),
-      language: cambLanguage || "ar-eg",
+      language: Number(cambLanguageId),
       speech_model: cambSpeechModel || "mars-8.1-flash-beta",
+      speed: cambSpeakingRate,
       output_configuration: { format: "wav" },
     };
     if (cambUserInstructions.trim() && cambSpeechModel === "mars-instruct") {
@@ -520,9 +545,10 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setStatus("playing");
   }, [
     cambKey,
+    cambLanguageId,
     cambVoiceId,
-    cambLanguage,
     cambSpeechModel,
+    cambSpeakingRate,
     cambUserInstructions,
     text,
     playAudioBlob,
@@ -723,14 +749,18 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setGeminiAccent,
     cambKey,
     setCambKey,
+    cambLanguages,
+    loadCambLanguages,
+    cambLanguageId,
+    setCambLanguageId,
     cambVoices,
     cambVoiceId,
     setCambVoiceId,
     loadCambVoices,
-    cambLanguage,
-    setCambLanguage,
     cambSpeechModel,
     setCambSpeechModel,
+    cambSpeakingRate,
+    setCambSpeakingRate,
     cambUserInstructions,
     setCambUserInstructions,
     azureKey,

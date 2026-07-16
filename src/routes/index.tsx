@@ -251,7 +251,7 @@ function Slider({
 }
 
 function Sliders() {
-  const { rate, setRate, pitch, setPitch, volume, setVolume, locale } = useTTS();
+  const { rate, setRate, pitch, setPitch, volume, setVolume, engine, locale } = useTTS();
   return (
     <div className="space-y-5">
       <Slider
@@ -278,6 +278,13 @@ function Sliders() {
         step={0.05}
         onChange={setVolume}
       />
+      {engine !== "browser" && (
+        <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+          {locale === "ar"
+            ? "طبقة الصوت غير متاحة إلا في وضع صوت المتصفح المجاني (السرعة والصوت لا يزالان يعملان في الوضعين الآخرين)."
+            : "Pitch is only available in the free browser voice mode."}
+        </p>
+      )}
     </div>
   );
 }
@@ -285,7 +292,7 @@ function Sliders() {
 function EngineTabs() {
   const { engine, setEngine, locale } = useTTS();
   const options: { id: typeof engine; ar: string; en: string }[] = [
-    { id: "browser", ar: "الصوت الافتراضي (جوجل)", en: "Browser voice (free)" },
+    { id: "browser", ar: "صوت المتصفح (مجاني)", en: "Browser voice (free)" },
     { id: "elevenlabs", ar: "ElevenLabs", en: "ElevenLabs" },
     { id: "gemini", ar: "Google Gemini TTS", en: "Google Gemini TTS" },
     { id: "camb", ar: "CAMB.AI", en: "CAMB.AI" },
@@ -874,39 +881,6 @@ function Footer() {
   );
 }
 
-const CAMB_LANGUAGES = [
-  { value: "ar-xa", ar: "عربي فصحى (فصيح)", en: "Arabic (Modern Standard)" },
-  { value: "ar-eg", ar: "عربي (مصر)", en: "Arabic (Egypt)" },
-  { value: "ar-sa", ar: "عربي (السعودية)", en: "Arabic (Saudi Arabia)" },
-  { value: "ar-ae", ar: "عربي (الإمارات)", en: "Arabic (UAE)" },
-  { value: "ar-kw", ar: "عربي (الكويت)", en: "Arabic (Kuwait)" },
-  { value: "ar-qa", ar: "عربي (قطر)", en: "Arabic (Qatar)" },
-  { value: "ar-bh", ar: "عربي (البحرين)", en: "Arabic (Bahrain)" },
-  { value: "ar-om", ar: "عربي (عُمان)", en: "Arabic (Oman)" },
-  { value: "ar-jo", ar: "عربي (الأردن)", en: "Arabic (Jordan)" },
-  { value: "ar-lb", ar: "عربي (لبنان)", en: "Arabic (Lebanon)" },
-  { value: "ar-sy", ar: "عربي (سوريا)", en: "Arabic (Syria)" },
-  { value: "ar-iq", ar: "عربي (العراق)", en: "Arabic (Iraq)" },
-  { value: "ar-ye", ar: "عربي (اليمن)", en: "Arabic (Yemen)" },
-  { value: "ar-ma", ar: "عربي (المغرب)", en: "Arabic (Morocco)" },
-  { value: "ar-dz", ar: "عربي (الجزائر)", en: "Arabic (Algeria)" },
-  { value: "ar-tn", ar: "عربي (تونس)", en: "Arabic (Tunisia)" },
-  { value: "ar-ly", ar: "عربي (ليبيا)", en: "Arabic (Libya)" },
-  { value: "en-us", ar: "إنجليزي (أمريكا)", en: "English (US)" },
-  { value: "en-gb", ar: "إنجليزي (بريطانيا)", en: "English (UK)" },
-];
-
-const CAMB_STYLE_CHIPS = [
-  { value: "بصوت هادئ ومهني وواثق", ar: "هادئ ومهني", en: "Calm & professional" },
-  { value: "بصوت حماسي وسريع الإيقاع، زي إعلان تجاري", ar: "إعلان حماسي", en: "Excited ad" },
-  {
-    value: "بصوت دافئ وبطيء وحنون، زي قصة قبل النوم لطفل",
-    ar: "قصة أطفال",
-    en: "Bedtime story",
-  },
-  { value: "بصوت رسمي وواضح، زي مذيع نشرة أخبار", ar: "نشرة أخبار", en: "News anchor" },
-];
-
 const CAMB_SPEECH_MODELS = [
   { value: "mars-8.1-flash-beta", ar: "سريع (Flash)", en: "Fast (Flash)" },
   { value: "mars-8.1-pro-beta", ar: "عالي الجودة (Pro)", en: "High quality (Pro)" },
@@ -916,14 +890,11 @@ const CAMB_SPEECH_MODELS = [
 function CambPanel() {
   const t = useTTS();
   const isAr = t.locale === "ar";
-
-  const voicesForLanguage = t.cambVoices.filter(
-    (v) => !v.language || v.language === t.cambLanguage,
-  );
-  // fall back to the full list if nothing matches the selected language
-  // (e.g. the account's voices weren't tagged with a language by CAMB.AI)
-  const visibleVoices = voicesForLanguage.length > 0 ? voicesForLanguage : t.cambVoices;
-
+  const filteredVoices = t.cambLanguageId
+    ? t.cambVoices.filter((v) => String(v.language) === t.cambLanguageId)
+    : t.cambVoices;
+  const loadBtnClass =
+    "w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10";
   return (
     <div className="space-y-3">
       <label className="block text-sm font-semibold">
@@ -936,47 +907,61 @@ function CambPanel() {
         className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
       />
 
-      <label className="block text-sm font-semibold">{isAr ? "اللغة" : "Language"}</label>
-      <select
-        value={t.cambLanguage}
-        onChange={(e) => t.setCambLanguage(e.target.value)}
-        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      <button
+        type="button"
+        onClick={() => {
+          t.loadCambLanguages().catch(() => {});
+        }}
+        className={loadBtnClass}
       >
-        {CAMB_LANGUAGES.map((o) => (
-          <option key={o.value} value={o.value}>
-            {isAr ? o.ar : o.en}
-          </option>
-        ))}
-      </select>
+        {isAr ? "تحميل اللغات المتاحة" : "Load available languages"}
+      </button>
+
+      {t.cambLanguages.length > 0 && (
+        <>
+          <label className="block text-sm font-semibold">{isAr ? "اللغة" : "Language"}</label>
+          <select
+            value={t.cambLanguageId}
+            onChange={(e) => t.setCambLanguageId(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+          >
+            {t.cambLanguages.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.language}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
 
       <button
         type="button"
         onClick={() => {
           t.loadCambVoices().catch(() => {});
         }}
-        className="w-full rounded-xl border border-primary/40 bg-card p-3 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
+        className={loadBtnClass}
       >
         {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load voices available on my account"}
       </button>
 
-      {visibleVoices.length > 0 && (
+      {filteredVoices.length > 0 && (
         <select
           value={t.cambVoiceId}
           onChange={(e) => t.setCambVoiceId(e.target.value)}
           className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
         >
-          {visibleVoices.map((v) => (
+          {filteredVoices.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.voice_name} {v.gender ? `(${v.gender})` : ""}
+              {v.voice_name}
             </option>
           ))}
         </select>
       )}
-      {t.cambVoices.length > 0 && voicesForLanguage.length === 0 && (
+      {t.cambVoices.length > 0 && filteredVoices.length === 0 && (
         <p className="text-xs text-muted-foreground">
           {isAr
-            ? "مفيش أصوات متاحة على حسابك مخصصة لهذه اللغة بالتحديد، فبنعرض كل أصواتك."
-            : "None of your voices are tagged for this exact language, showing all your voices instead."}
+            ? "لا توجد أصوات محمّلة لهذه اللغة على حسابك."
+            : "No loaded voices support this language on your account."}
         </p>
       )}
 
@@ -1001,6 +986,14 @@ function CambPanel() {
               ))}
             </select>
           </div>
+          <Slider
+            label={isAr ? "سرعة الكلام" : "Speaking rate"}
+            value={t.cambSpeakingRate}
+            min={0.5}
+            max={2}
+            step={0.05}
+            onChange={t.setCambSpeakingRate}
+          />
           {t.cambSpeechModel === "mars-instruct" && (
             <div>
               <label className="block text-sm font-semibold">
@@ -1015,26 +1008,6 @@ function CambPanel() {
                 }
                 className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
               />
-              <div className="mt-2 flex flex-wrap gap-2">
-                {CAMB_STYLE_CHIPS.map((chip) => (
-                  <button
-                    key={chip.value}
-                    type="button"
-                    onClick={() =>
-                      t.setCambUserInstructions(
-                        t.cambUserInstructions === chip.value ? "" : chip.value,
-                      )
-                    }
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
-                      t.cambUserInstructions === chip.value
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background hover:bg-accent"
-                    }`}
-                  >
-                    {isAr ? chip.ar : chip.en}
-                  </button>
-                ))}
-              </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {isAr
                   ? "يمكنك أيضًا كتابة وسوم زي [excited] أو [speaking slowly] داخل النص نفسه مع هذا النموذج."
