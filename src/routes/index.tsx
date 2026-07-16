@@ -251,7 +251,7 @@ function Slider({
 }
 
 function Sliders() {
-  const { rate, setRate, pitch, setPitch, volume, setVolume, engine, locale } = useTTS();
+  const { rate, setRate, pitch, setPitch, volume, setVolume, locale } = useTTS();
   return (
     <div className="space-y-5">
       <Slider
@@ -278,13 +278,6 @@ function Sliders() {
         step={0.05}
         onChange={setVolume}
       />
-      {engine !== "browser" && (
-        <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-          {locale === "ar"
-            ? "طبقة الصوت غير متاحة إلا في وضع صوت المتصفح المجاني (السرعة والصوت لا يزالان يعملان في الوضعين الآخرين)."
-            : "Pitch is only available in the free browser voice mode."}
-        </p>
-      )}
     </div>
   );
 }
@@ -429,7 +422,7 @@ function ElevenPanel() {
       </button>
 
       {advanced && (
-        <div className="space-y-4 rounded-2xl border border-border bg-muted/40 p-4">
+        <div className="space-y-4 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
           <div>
             <label className="mb-1.5 block text-sm font-semibold">
               {isAr ? "أو أدخل معرّف الصوت يدويًا (Voice ID)" : "Or enter Voice ID manually"}
@@ -560,7 +553,7 @@ function GeminiPanel() {
         ))}
       </select>
 
-      <details className="rounded-xl border border-border p-3">
+      <details className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
         <summary className="cursor-pointer text-sm font-semibold">
           {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
         </summary>
@@ -701,16 +694,16 @@ const GEMINI_VOICES = [
 const GEMINI_SCENE_CHIPS = [
   { value: "بصوت هادئ ومهني وواثق", ar: "هادئ ومهني", en: "Calm & professional" },
   {
-    value: "بصوت حماسي وسريع الإيقاع، زي إعلان تجاري",
+    value: "بصوت حماسي وسريع الإيقاع، مثل إعلان تجاري",
     ar: "إعلان حماسي",
     en: "Excited ad",
   },
   {
-    value: "بصوت دافئ وبطيء وحنون، زي قصة قبل النوم لطفل",
+    value: "بصوت دافئ وبطيء وحنون، مثل قصة قبل النوم لطفل",
     ar: "قصة أطفال",
     en: "Bedtime story",
   },
-  { value: "بصوت رسمي وواضح، زي مذيع نشرة أخبار", ar: "نشرة أخبار", en: "News anchor" },
+  { value: "بصوت رسمي وواضح، مثل مذيع نشرة أخبار", ar: "نشرة أخبار", en: "News anchor" },
 ];
 
 const GEMINI_STYLE_OPTIONS = [
@@ -752,7 +745,7 @@ function Controls() {
         : "Loading..."
       : status === "playing"
         ? isAr
-          ? "يشتغل"
+          ? "يعمل"
           : "Playing"
         : status === "paused"
           ? isAr
@@ -887,12 +880,20 @@ const CAMB_SPEECH_MODELS = [
   { value: "mars-instruct", ar: "تحكم بالتعليمات (Instruct)", en: "Instruction-controlled" },
 ];
 
+const CAMB_ALL_ARABIC = "all-arabic";
+
 function CambPanel() {
   const t = useTTS();
   const isAr = t.locale === "ar";
-  const filteredVoices = t.cambLanguageId
-    ? t.cambVoices.filter((v) => String(v.language) === t.cambLanguageId)
-    : t.cambVoices;
+  const arabicLanguageIds = t.cambLanguages
+    .filter((l) => /arabic/i.test(l.language))
+    .map((l) => String(l.id));
+  const filteredVoices =
+    t.cambLanguageId === CAMB_ALL_ARABIC
+      ? t.cambVoices.filter((v) => arabicLanguageIds.includes(String(v.language)))
+      : t.cambLanguageId
+        ? t.cambVoices.filter((v) => String(v.language) === t.cambLanguageId)
+        : t.cambVoices;
   const loadBtnClass =
     "w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10";
   return (
@@ -925,6 +926,9 @@ function CambPanel() {
             onChange={(e) => t.setCambLanguageId(e.target.value)}
             className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
           >
+            {arabicLanguageIds.length > 0 && (
+              <option value={CAMB_ALL_ARABIC}>{isAr ? "عربي (كل اللهجات)" : "Arabic (all)"}</option>
+            )}
             {t.cambLanguages.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.language}
@@ -965,7 +969,7 @@ function CambPanel() {
         </p>
       )}
 
-      <details className="rounded-xl border border-border p-3">
+      <details className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
         <summary className="cursor-pointer text-sm font-semibold">
           {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
         </summary>
@@ -1022,7 +1026,7 @@ function CambPanel() {
           </p>
           <p className="text-xs leading-relaxed text-muted-foreground">
             {isAr
-              ? "لا تملك مفتاحًا؟ سجّل مجانًا على studio.camb.ai ثم اذهب لـ Settings → API Keys."
+              ? "لا تملك مفتاحًا؟ سجّل مجانًا على studio.camb.ai ثم اذهب إلى Settings → API Keys."
               : "No key yet? Sign up for free at studio.camb.ai then go to Settings → API Keys."}
           </p>
         </div>
@@ -1120,7 +1124,7 @@ function AzurePanel() {
         ))}
       </select>
 
-      <details className="rounded-xl border border-border p-3">
+      <details className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
         <summary className="cursor-pointer text-sm font-semibold">
           {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
         </summary>
@@ -1171,7 +1175,7 @@ function AzurePanel() {
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
               {isAr
-                ? "تخلي الصوت يقلّد فئة عمرية/جنس مختلف — مدعوم في بعض الأصوات الصينية والإنجليزية بس."
+                ? "تجعل الصوت يقلّد فئة عمرية أو جنسًا مختلفًا — وهذا مدعوم في بعض الأصوات الصينية والإنجليزية فقط."
                 : "Makes the voice mimic a different age/gender — only supported by some Chinese and English voices."}
             </p>
           </div>
@@ -1202,12 +1206,12 @@ function AzurePanel() {
               </li>
               <li>
                 {isAr
-                  ? "بعد إنشاء المورد، روح لـ 'Keys and Endpoint' وانسخ KEY 1."
+                  ? "بعد إنشاء المورد، انتقل إلى 'Keys and Endpoint' وانسخ KEY 1."
                   : "After the resource is created, go to 'Keys and Endpoint' and copy KEY 1."}
               </li>
               <li>
                 {isAr
-                  ? "حساب Azure المجاني بيدّي 500 ألف حرف مجانًا شهريًا للأصوات Neural."
+                  ? "يوفر حساب Azure المجاني 500 ألف حرف مجانًا شهريًا للأصوات Neural."
                   : "The Azure free tier includes 500,000 characters per month for Neural voices."}
               </li>
             </ol>
@@ -1284,7 +1288,7 @@ function PollyPanel() {
           : "Zeina is the Arabic voice, and only works with the Standard engine type."}
       </p>
 
-      <details className="rounded-xl border border-border p-3">
+      <details className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
         <summary className="cursor-pointer text-sm font-semibold">
           {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
         </summary>
@@ -1307,7 +1311,7 @@ function PollyPanel() {
           </div>
           <p className="rounded-lg bg-destructive/10 p-2 text-xs leading-relaxed text-destructive">
             {isAr
-              ? "تنبيه أمان: مفاتيح AWS أخطر من مفاتيح باقي المحركات، لأنها ممكن تدي صلاحيات على حسابك كله لو معملتلهاش تقييد. اتبع الخطوات تحت بالظبط لإنشاء مفتاح مقيّد بخدمة Polly فقط."
+              ? "تنبيه أمني: مفاتيح AWS أخطر من مفاتيح باقي المحركات، لأنها قد تمنح صلاحيات على حسابك بالكامل إذا لم تُقيَّد. اتّبع الخطوات أدناه بدقة لإنشاء مفتاح مقيّد بخدمة Polly فقط."
               : "Security note: AWS keys are riskier than other engines' keys — an unrestricted key can control your whole account. Follow the steps below exactly to create a key scoped to Polly only."}
           </p>
           <div className="text-xs leading-relaxed text-muted-foreground">
@@ -1324,12 +1328,12 @@ function PollyPanel() {
               </li>
               <li>
                 {isAr
-                  ? "من البحث فوق، اكتب 'IAM' وادخل عليها."
+                  ? "من مربع البحث في الأعلى، اكتب 'IAM' وادخل إليها."
                   : "Search for 'IAM' at the top and open it."}
               </li>
               <li>
                 {isAr
-                  ? "من القائمة الجانبية Users → Create user، واختار اسم مثل voxly-polly."
+                  ? "من القائمة الجانبية Users → Create user، واختر اسمًا مثل voxly-polly."
                   : "In the sidebar go to Users → Create user, and give it a name like voxly-polly."}
               </li>
               <li>
@@ -1344,7 +1348,7 @@ function PollyPanel() {
               </li>
               <li>
                 {isAr
-                  ? "انسخ Access Key ID وSecret Access Key فورًا (السر ما بيتشافش تاني بعد كده)."
+                  ? "انسخ Access Key ID وSecret Access Key فورًا (لن يظهر المفتاح السري مرة أخرى بعد ذلك)."
                   : "Copy the Access Key ID and Secret Access Key immediately — the secret won't be shown again."}
               </li>
             </ol>

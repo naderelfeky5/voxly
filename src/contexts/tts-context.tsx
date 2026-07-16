@@ -512,11 +512,18 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!cambKey) throw new Error("أدخل مفتاح CAMB.AI API");
     if (!cambLanguageId) throw new Error("اختر لغة أولًا (حمّل اللغات المتاحة)");
     if (!cambVoiceId) throw new Error("اختر صوتًا أولًا (حمّل الأصوات المتاحة)");
+    // Always send the language that the chosen voice itself belongs to — this
+    // stays correct even when the dropdown filter is set to "Arabic (all)".
+    const selectedVoice = cambVoices.find((v) => String(v.id) === cambVoiceId);
+    const languageToSend =
+      selectedVoice?.language ??
+      (/^\d+$/.test(cambLanguageId) ? Number(cambLanguageId) : undefined);
+    if (!languageToSend) throw new Error("تعذّر تحديد لغة الصوت المختار");
     setStatus("loading");
     const body: Record<string, unknown> = {
       text,
       voice_id: Number(cambVoiceId),
-      language: Number(cambLanguageId),
+      language: languageToSend,
       speech_model: cambSpeechModel || "mars-8.1-flash-beta",
       speed: cambSpeakingRate,
       output_configuration: { format: "wav" },
@@ -547,6 +554,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     cambKey,
     cambLanguageId,
     cambVoiceId,
+    cambVoices,
     cambSpeechModel,
     cambSpeakingRate,
     cambUserInstructions,
