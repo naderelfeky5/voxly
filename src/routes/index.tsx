@@ -287,8 +287,9 @@ function EngineTabs() {
   const options: { id: typeof engine; ar: string; en: string }[] = [
     { id: "browser", ar: "صوت المتصفح (مجاني)", en: "Browser voice (free)" },
     { id: "elevenlabs", ar: "ElevenLabs", en: "ElevenLabs" },
-    { id: "gemini", ar: "Google Gemini TTS", en: "Google Gemini TTS" },
+    { id: "gemini", ar: "Google Gemini TTS (موصى به)", en: "Google Gemini TTS (Recommended)" },
     { id: "camb", ar: "CAMB.AI", en: "CAMB.AI" },
+    { id: "fish", ar: "Fish Audio", en: "Fish Audio" },
     { id: "azure", ar: "Microsoft Azure TTS (مدفوع)", en: "Microsoft Azure TTS (Paid)" },
     { id: "polly", ar: "Amazon Polly (مدفوع)", en: "Amazon Polly (Paid)" },
   ];
@@ -320,6 +321,7 @@ function EnginePanel() {
       {engine === "elevenlabs" && <ElevenPanel />}
       {engine === "gemini" && <GeminiPanel />}
       {engine === "camb" && <CambPanel />}
+      {engine === "fish" && <FishPanel />}
       {engine === "azure" && <AzurePanel />}
       {engine === "polly" && <PollyPanel />}
     </div>
@@ -359,7 +361,6 @@ function BrowserPanel() {
 
 function ElevenPanel() {
   const t = useTTS();
-  const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const isAr = t.locale === "ar";
@@ -388,15 +389,15 @@ function ElevenPanel() {
         placeholder="sk_..."
         className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
       />
-      <div className="flex justify-center">
-        <button
-          onClick={load}
-          disabled={busy}
-          className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90 disabled:opacity-60"
-        >
-          ⟳ {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load my available voices"}
-        </button>
-      </div>
+
+      <button
+        type="button"
+        onClick={load}
+        disabled={busy}
+        className="w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+      >
+        {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load voices available on my account"}
+      </button>
 
       {err && <p className="text-sm text-destructive">{err}</p>}
 
@@ -414,15 +415,11 @@ function ElevenPanel() {
         </select>
       )}
 
-      <button
-        onClick={() => setAdvanced((v) => !v)}
-        className="text-sm font-semibold text-primary hover:underline"
-      >
-        {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"} {advanced ? "▲" : "▼"}
-      </button>
-
-      {advanced && (
-        <div className="space-y-4 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
+      <details className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
+        </summary>
+        <div className="mt-3 space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-semibold">
               {isAr ? "أو أدخل معرّف الصوت يدويًا (Voice ID)" : "Or enter Voice ID manually"}
@@ -477,7 +474,7 @@ function ElevenPanel() {
               : "No key? Create a free account at elevenlabs.io and grab it from account settings."}
           </p>
         </div>
-      )}
+      </details>
     </div>
   );
 }
@@ -1028,6 +1025,146 @@ function CambPanel() {
             {isAr
               ? "لا تملك مفتاحًا؟ سجّل مجانًا على studio.camb.ai ثم اذهب إلى Settings → API Keys."
               : "No key yet? Sign up for free at studio.camb.ai then go to Settings → API Keys."}
+          </p>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+const FISH_MODELS = [
+  { value: "s2.1-pro", ar: "الأحدث (موصى به)", en: "Latest (Recommended)" },
+  { value: "s2.1-pro-free", ar: "مجاني (للتجربة)", en: "Free (for testing)" },
+  { value: "s2-pro", ar: "متعدد المتحدثين (S2)", en: "Multi-speaker (S2)" },
+  { value: "s1", ar: "قديم (S1)", en: "Legacy (S1)" },
+];
+
+const FISH_LATENCY_OPTIONS = [
+  { value: "normal", ar: "جودة أعلى", en: "Higher quality" },
+  { value: "balanced", ar: "سرعة أعلى", en: "Faster" },
+];
+
+const FISH_TAGS = [
+  { tag: "whispering", ar: "همس", en: "Whisper" },
+  { tag: "excited", ar: "حماس", en: "Excited" },
+  { tag: "sad", ar: "حزن", en: "Sad" },
+  { tag: "chuckle", ar: "ضحكة خفيفة", en: "Chuckle" },
+  { tag: "sigh", ar: "تنهيدة", en: "Sigh" },
+  { tag: "emphasis", ar: "تشديد", en: "Emphasis" },
+  { tag: "pause", ar: "وقفة", en: "Pause" },
+  { tag: "shouting", ar: "صراخ", en: "Shouting" },
+];
+
+function FishPanel() {
+  const t = useTTS();
+  const isAr = t.locale === "ar";
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold">
+        {isAr ? "مفتاح Fish Audio API" : "Fish Audio API key"}
+      </label>
+      <input
+        type="password"
+        value={t.fishKey}
+        onChange={(e) => t.setFishKey(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      />
+
+      <label className="block text-sm font-semibold">{isAr ? "النموذج" : "Model"}</label>
+      <select
+        value={t.fishModel}
+        onChange={(e) => t.setFishModel(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      >
+        {FISH_MODELS.map((m) => (
+          <option key={m.value} value={m.value}>
+            {isAr ? m.ar : m.en}
+          </option>
+        ))}
+      </select>
+
+      <button
+        type="button"
+        onClick={() => {
+          t.loadFishVoices().catch(() => {});
+        }}
+        className="w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10"
+      >
+        {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load voices available on my account"}
+      </button>
+
+      {t.fishVoices.length > 0 && (
+        <select
+          value={t.fishVoiceId}
+          onChange={(e) => t.setFishVoiceId(e.target.value)}
+          className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+        >
+          {t.fishVoices.map((v) => (
+            <option key={v._id} value={v._id}>
+              {v.title}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <details className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <Slider
+            label={isAr ? "سرعة الكلام" : "Speaking rate"}
+            value={t.fishSpeed}
+            min={0.5}
+            max={2}
+            step={0.05}
+            onChange={t.setFishSpeed}
+          />
+          <div>
+            <label className="block text-sm font-semibold">{isAr ? "الأولوية" : "Priority"}</label>
+            <select
+              value={t.fishLatency}
+              onChange={(e) => t.setFishLatency(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+            >
+              {FISH_LATENCY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {isAr ? o.ar : o.en}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold">
+              {isAr ? "وسوم الأسلوب والإيقاع" : "Style & pacing tags"}
+            </label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isAr
+                ? "هذا المحرك يتحكم بالأسلوب عبر وسوم توضع داخل النص نفسه في مكان التأثير المطلوب. دوس على وسم عشان يتضاف في آخر النص، وممكن تنقله بنفسك لمكان تاني جوه المربع فوق."
+                : "This engine controls style via tags placed directly inside the text at the point they should apply. Tap a tag to add it at the end of the text — you can move it anywhere inside the text box yourself."}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {FISH_TAGS.map((f) => (
+                <button
+                  key={f.tag}
+                  type="button"
+                  onClick={() => t.insertFishTag(f.tag)}
+                  className="rounded-full border border-border bg-background px-3 py-1 text-xs transition hover:bg-accent"
+                >
+                  {isAr ? f.ar : f.en}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى Fish Audio عند الاستماع فقط."
+              : "Your key isn't saved anywhere and goes straight to Fish Audio only when you press Listen."}
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {isAr
+              ? "لا تملك مفتاحًا؟ سجّل مجانًا على fish.audio ثم اذهب إلى API Keys في لوحة التحكم — يمنحك رصيدًا تجريبيًا مجانيًا دون الحاجة لبطاقة."
+              : "No key yet? Sign up for free at fish.audio then go to API Keys in the dashboard — you get free trial credits, no card required."}
           </p>
         </div>
       </details>

@@ -11,7 +11,7 @@ import {
 
 import { updateFavicon } from "../lib/utils";
 
-export type Engine = "browser" | "elevenlabs" | "gemini" | "camb" | "azure" | "polly";
+export type Engine = "browser" | "elevenlabs" | "gemini" | "camb" | "fish" | "azure" | "polly";
 export type Locale = "ar" | "en";
 export type Theme = "light" | "dark";
 export type Status = "idle" | "loading" | "playing" | "paused" | "stopped" | "error";
@@ -19,6 +19,7 @@ export type Status = "idle" | "loading" | "playing" | "paused" | "stopped" | "er
 type BrowserVoice = { name: string; lang: string; voiceURI: string };
 type CambVoice = { id: number; voice_name: string; gender?: number; language?: number };
 type CambLanguage = { id: number; language: string; short_name?: string };
+type FishVoice = { _id: string; title: string };
 
 interface TTSState {
   // ui
@@ -102,6 +103,21 @@ interface TTSState {
   setCambSpeakingRate: (v: number) => void;
   cambUserInstructions: string;
   setCambUserInstructions: (v: string) => void;
+
+  // fish audio
+  fishKey: string;
+  setFishKey: (v: string) => void;
+  fishModel: string;
+  setFishModel: (v: string) => void;
+  fishVoices: FishVoice[];
+  loadFishVoices: () => Promise<void>;
+  fishVoiceId: string;
+  setFishVoiceId: (v: string) => void;
+  fishSpeed: number;
+  setFishSpeed: (v: number) => void;
+  fishLatency: string;
+  setFishLatency: (v: string) => void;
+  insertFishTag: (tag: string) => void;
 
   // azure
   azureKey: string;
@@ -197,6 +213,13 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [cambSpeakingRate, setCambSpeakingRate] = useState(1);
   const [cambUserInstructions, setCambUserInstructions] = useState("");
 
+  const [fishKey, setFishKey] = useState("");
+  const [fishModel, setFishModel] = useState("s2.1-pro");
+  const [fishVoices, setFishVoices] = useState<FishVoice[]>([]);
+  const [fishVoiceId, setFishVoiceId] = useState("");
+  const [fishSpeed, setFishSpeed] = useState(1);
+  const [fishLatency, setFishLatency] = useState("normal");
+
   const [azureKey, setAzureKey] = useState("");
   const [azureRegion, setAzureRegion] = useState("eastus");
   const [azureVoice, setAzureVoice] = useState("ar-EG-SalmaNeural");
@@ -270,15 +293,16 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const filteredBrowserVoices = useMemo(() => {
-    const prefix = locale === "ar" ? "ar" : "en";
-    return browserVoices.filter((v) => v.lang.toLowerCase().startsWith(prefix));
-  }, [browserVoices, locale]);
+    return [...browserVoices].sort((a, b) => a.lang.localeCompare(b.lang));
+  }, [browserVoices]);
 
   useEffect(() => {
     if (!browserVoiceURI && filteredBrowserVoices.length > 0 && engine === "browser") {
-      setBrowserVoiceURI(filteredBrowserVoices[0].voiceURI);
+      const prefix = locale === "ar" ? "ar" : "en";
+      const preferred = filteredBrowserVoices.find((v) => v.lang.toLowerCase().startsWith(prefix));
+      setBrowserVoiceURI((preferred || filteredBrowserVoices[0]).voiceURI);
     }
-  }, [filteredBrowserVoices, browserVoiceURI, engine]);
+  }, [filteredBrowserVoices, browserVoiceURI, engine, locale]);
 
   const stop = useCallback(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -564,6 +588,54 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     volume,
   ]);
 
+  const insertFishTag = useCallback((tag: string) => {
+    setText((prev) => (prev ? `${prev} [${tag}]` : `[${tag}] `));
+  }, []);
+
+  const loadFishVoices = useCallback(async () => {
+    if (!fishKey) throw new Error("أدخل المفتاح أولاً");
+    const res = await fetch("https://api.fish.audio/model?self=true&page_size=100", {
+      headers: { Authorization: `Bearer ${fishKey}` },
+    });
+    if (!res.ok) throw new Error("فشل تحميل الأصوات");
+    const data = (await res.json()) as { items?: FishVoice[] } | FishVoice[];
+    const list = Array.isArray(data) ? data : data.items || [];
+    setFishVoices(list);
+    if (list[0]) setFishVoiceId(list[0]._id);
+  }, [fishKey]);
+
+  const speakFish = useCallback(async () => {
+    if (!fishKey) throw new Error("أدخل مفتاح Fish Audio API");
+    setStatus("loading");
+    const body: Record<string, unknown> = {
+      text,
+      format: "mp3",
+      latency: fishLatency || "normal",
+      prosody: { speed: fishSpeed },
+    };
+    if (fishVoiceId) body.reference_id = fishVoiceId;
+    const res = await fetch("https://api.fish.audio/v1/tts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${fishKey}`,
+        "Content-Type": "application/json",
+        model: fishModel || "s2.1-pro",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`Fish Audio: ${res.status} ${t.slice(0, 160)}`);
+    }
+    const blob = await res.blob();
+    await playAudioBlob(blob);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
+      audioRef.current.volume = volume;
+    }
+    setStatus("playing");
+  }, [fishKey, fishModel, fishVoiceId, fishSpeed, fishLatency, text, playAudioBlob, rate, volume]);
+
   const speakAzure = useCallback(async () => {
     if (!azureKey) throw new Error("أدخل مفتاح Azure API");
     const region = azureRegion || "eastus";
@@ -680,13 +752,24 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       else if (engine === "elevenlabs") await speakEleven();
       else if (engine === "gemini") await speakGemini();
       else if (engine === "camb") await speakCamb();
+      else if (engine === "fish") await speakFish();
       else if (engine === "azure") await speakAzure();
       else await speakPolly();
     } catch (e) {
       setStatus("error");
       setErrorMsg(e instanceof Error ? e.message : "حدث خطأ");
     }
-  }, [engine, text, speakBrowser, speakEleven, speakGemini, speakCamb, speakAzure, speakPolly]);
+  }, [
+    engine,
+    text,
+    speakBrowser,
+    speakEleven,
+    speakGemini,
+    speakCamb,
+    speakFish,
+    speakAzure,
+    speakPolly,
+  ]);
 
   const download = useCallback(() => {
     if (!lastAudioUrl) return;
@@ -771,6 +854,19 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setCambSpeakingRate,
     cambUserInstructions,
     setCambUserInstructions,
+    fishKey,
+    setFishKey,
+    fishModel,
+    setFishModel,
+    fishVoices,
+    loadFishVoices,
+    fishVoiceId,
+    setFishVoiceId,
+    fishSpeed,
+    setFishSpeed,
+    fishLatency,
+    setFishLatency,
+    insertFishTag,
     azureKey,
     setAzureKey,
     azureRegion,
