@@ -292,7 +292,7 @@ function Sliders() {
 function EngineTabs() {
   const { engine, setEngine, locale } = useTTS();
   const options: { id: typeof engine; ar: string; en: string }[] = [
-    { id: "browser", ar: "صوت المتصفح (مجاني)", en: "Browser voice (free)" },
+    { id: "browser", ar: "الصوت الافتراضي (جوجل)", en: "Browser voice (free)" },
     { id: "elevenlabs", ar: "ElevenLabs", en: "ElevenLabs" },
     { id: "gemini", ar: "Google Gemini TTS", en: "Google Gemini TTS" },
     { id: "camb", ar: "CAMB.AI", en: "CAMB.AI" },
