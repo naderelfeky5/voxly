@@ -17,7 +17,7 @@ export type Theme = "light" | "dark";
 export type Status = "idle" | "loading" | "playing" | "paused" | "stopped" | "error";
 
 type BrowserVoice = { name: string; lang: string; voiceURI: string };
-type CambVoice = { id: number; voice_name: string; gender?: string };
+type CambVoice = { id: number; voice_name: string; gender?: string; language?: string };
 
 interface TTSState {
   // ui
