@@ -11,13 +11,13 @@ import {
 
 import { updateFavicon } from "../lib/utils";
 
-export type Engine =
-  "browser" | "elevenlabs" | "gemini" | "openai" | "easyvoice" | "azure" | "polly";
+export type Engine = "browser" | "elevenlabs" | "gemini" | "camb" | "azure" | "polly";
 export type Locale = "ar" | "en";
 export type Theme = "light" | "dark";
 export type Status = "idle" | "loading" | "playing" | "paused" | "stopped" | "error";
 
 type BrowserVoice = { name: string; lang: string; voiceURI: string };
+type CambVoice = { id: number; voice_name: string; gender?: string };
 
 interface TTSState {
   // ui
@@ -84,27 +84,19 @@ interface TTSState {
   geminiAccent: string;
   setGeminiAccent: (v: string) => void;
 
-  // openai
-  openaiKey: string;
-  setOpenaiKey: (v: string) => void;
-  openaiModel: string;
-  setOpenaiModel: (v: string) => void;
-  openaiVoice: string;
-  setOpenaiVoice: (v: string) => void;
-  openaiInstructions: string;
-  setOpenaiInstructions: (v: string) => void;
-
-  // easyvoice
-  easyvoiceKey: string;
-  setEasyvoiceKey: (v: string) => void;
-  easyvoiceVoice: string;
-  setEasyvoiceVoice: (v: string) => void;
-  easyvoiceTone: string;
-  setEasyvoiceTone: (v: string) => void;
-  easyvoicePitch: number;
-  setEasyvoicePitch: (v: number) => void;
-  easyvoiceVolumeDb: number;
-  setEasyvoiceVolumeDb: (v: number) => void;
+  // camb.ai
+  cambKey: string;
+  setCambKey: (v: string) => void;
+  cambVoices: CambVoice[];
+  cambVoiceId: string;
+  setCambVoiceId: (v: string) => void;
+  loadCambVoices: () => Promise<void>;
+  cambLanguage: string;
+  setCambLanguage: (v: string) => void;
+  cambSpeechModel: string;
+  setCambSpeechModel: (v: string) => void;
+  cambUserInstructions: string;
+  setCambUserInstructions: (v: string) => void;
 
   // azure
   azureKey: string;
@@ -191,16 +183,12 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [geminiPace, setGeminiPace] = useState("");
   const [geminiAccent, setGeminiAccent] = useState("");
 
-  const [openaiKey, setOpenaiKey] = useState("");
-  const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini-tts");
-  const [openaiVoice, setOpenaiVoice] = useState("alloy");
-  const [openaiInstructions, setOpenaiInstructions] = useState("");
-
-  const [easyvoiceKey, setEasyvoiceKey] = useState("");
-  const [easyvoiceVoice, setEasyvoiceVoice] = useState("af_aoede");
-  const [easyvoiceTone, setEasyvoiceTone] = useState("");
-  const [easyvoicePitch, setEasyvoicePitch] = useState(0);
-  const [easyvoiceVolumeDb, setEasyvoiceVolumeDb] = useState(0);
+  const [cambKey, setCambKey] = useState("");
+  const [cambVoices, setCambVoices] = useState<CambVoice[]>([]);
+  const [cambVoiceId, setCambVoiceId] = useState("");
+  const [cambLanguage, setCambLanguage] = useState("ar-eg");
+  const [cambSpeechModel, setCambSpeechModel] = useState("mars-8.1-flash-beta");
+  const [cambUserInstructions, setCambUserInstructions] = useState("");
 
   const [azureKey, setAzureKey] = useState("");
   const [azureRegion, setAzureRegion] = useState("eastus");
@@ -486,60 +474,42 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     if (!geminiModel) setGeminiModel(list[0]);
   }, [geminiKey, geminiModel]);
 
-  const speakOpenAI = useCallback(async () => {
-    if (!openaiKey) throw new Error("أدخل مفتاح OpenAI API");
-    setStatus("loading");
-    const body: Record<string, unknown> = {
-      model: openaiModel || "gpt-4o-mini-tts",
-      voice: openaiVoice || "alloy",
-      input: text,
-    };
-    if (openaiInstructions.trim() && openaiModel !== "tts-1" && openaiModel !== "tts-1-hd") {
-      body.instructions = openaiInstructions.trim();
-    }
-    const res = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+  const loadCambVoices = useCallback(async () => {
+    if (!cambKey) throw new Error("أدخل المفتاح أولاً");
+    const res = await fetch("https://client.camb.ai/apis/list-voices", {
+      headers: { "x-api-key": cambKey },
     });
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error(`OpenAI: ${res.status} ${t.slice(0, 160)}`);
-    }
-    const blob = await res.blob();
-    await playAudioBlob(blob);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = rate;
-      audioRef.current.volume = volume;
-    }
-    setStatus("playing");
-  }, [openaiKey, openaiModel, openaiVoice, openaiInstructions, text, playAudioBlob, rate, volume]);
+    if (!res.ok) throw new Error("فشل تحميل الأصوات");
+    const data = (await res.json()) as CambVoice[];
+    setCambVoices(data || []);
+    if (data?.[0]) setCambVoiceId(String(data[0].id));
+  }, [cambKey]);
 
-  const speakEasyVoice = useCallback(async () => {
-    if (!easyvoiceKey) throw new Error("أدخل مفتاح EasyVoice API");
+  const speakCamb = useCallback(async () => {
+    if (!cambKey) throw new Error("أدخل مفتاح CAMB.AI API");
+    if (!cambVoiceId) throw new Error("اختر صوتًا أولًا (حمّل الأصوات المتاحة)");
     setStatus("loading");
     const body: Record<string, unknown> = {
-      model: "kokoro-82m",
-      input: text,
-      voice: easyvoiceVoice || "af_aoede",
+      text,
+      voice_id: Number(cambVoiceId),
+      language: cambLanguage || "ar-eg",
+      speech_model: cambSpeechModel || "mars-8.1-flash-beta",
+      output_configuration: { format: "wav" },
     };
-    if (easyvoiceTone && easyvoiceTone !== "neutral") body.ev_tone = easyvoiceTone;
-    if (easyvoicePitch !== 0) body.ev_pitch = easyvoicePitch;
-    if (easyvoiceVolumeDb !== 0) body.ev_volume_db = easyvoiceVolumeDb;
-    const res = await fetch("https://easyvoice.ae/api/v1/audio/speech", {
+    if (cambUserInstructions.trim() && cambSpeechModel === "mars-instruct") {
+      body.user_instructions = cambUserInstructions.trim();
+    }
+    const res = await fetch("https://client.camb.ai/apis/tts-stream", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${easyvoiceKey}`,
+        "x-api-key": cambKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
     });
     if (!res.ok) {
       const t = await res.text();
-      throw new Error(`EasyVoice: ${res.status} ${t.slice(0, 160)}`);
+      throw new Error(`CAMB.AI: ${res.status} ${t.slice(0, 160)}`);
     }
     const blob = await res.blob();
     await playAudioBlob(blob);
@@ -549,11 +519,11 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     }
     setStatus("playing");
   }, [
-    easyvoiceKey,
-    easyvoiceVoice,
-    easyvoiceTone,
-    easyvoicePitch,
-    easyvoiceVolumeDb,
+    cambKey,
+    cambVoiceId,
+    cambLanguage,
+    cambSpeechModel,
+    cambUserInstructions,
     text,
     playAudioBlob,
     rate,
@@ -675,31 +645,20 @@ export function TTSProvider({ children }: { children: ReactNode }) {
       if (engine === "browser") await speakBrowser();
       else if (engine === "elevenlabs") await speakEleven();
       else if (engine === "gemini") await speakGemini();
-      else if (engine === "openai") await speakOpenAI();
-      else if (engine === "easyvoice") await speakEasyVoice();
+      else if (engine === "camb") await speakCamb();
       else if (engine === "azure") await speakAzure();
       else await speakPolly();
     } catch (e) {
       setStatus("error");
       setErrorMsg(e instanceof Error ? e.message : "حدث خطأ");
     }
-  }, [
-    engine,
-    text,
-    speakBrowser,
-    speakEleven,
-    speakGemini,
-    speakOpenAI,
-    speakEasyVoice,
-    speakAzure,
-    speakPolly,
-  ]);
+  }, [engine, text, speakBrowser, speakEleven, speakGemini, speakCamb, speakAzure, speakPolly]);
 
   const download = useCallback(() => {
     if (!lastAudioUrl) return;
     const a = document.createElement("a");
     a.href = lastAudioUrl;
-    a.download = `voxly-${Date.now()}.${engine === "gemini" ? "wav" : "mp3"}`;
+    a.download = `voxly-${Date.now()}.${engine === "gemini" || engine === "camb" ? "wav" : "mp3"}`;
     a.click();
   }, [lastAudioUrl, engine]);
 
@@ -762,24 +721,18 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     setGeminiPace,
     geminiAccent,
     setGeminiAccent,
-    openaiKey,
-    setOpenaiKey,
-    openaiModel,
-    setOpenaiModel,
-    openaiVoice,
-    setOpenaiVoice,
-    openaiInstructions,
-    setOpenaiInstructions,
-    easyvoiceKey,
-    setEasyvoiceKey,
-    easyvoiceVoice,
-    setEasyvoiceVoice,
-    easyvoiceTone,
-    setEasyvoiceTone,
-    easyvoicePitch,
-    setEasyvoicePitch,
-    easyvoiceVolumeDb,
-    setEasyvoiceVolumeDb,
+    cambKey,
+    setCambKey,
+    cambVoices,
+    cambVoiceId,
+    setCambVoiceId,
+    loadCambVoices,
+    cambLanguage,
+    setCambLanguage,
+    cambSpeechModel,
+    setCambSpeechModel,
+    cambUserInstructions,
+    setCambUserInstructions,
     azureKey,
     setAzureKey,
     azureRegion,

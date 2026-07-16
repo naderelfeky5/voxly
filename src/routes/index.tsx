@@ -295,10 +295,9 @@ function EngineTabs() {
     { id: "browser", ar: "صوت المتصفح (مجاني)", en: "Browser voice (free)" },
     { id: "elevenlabs", ar: "ElevenLabs", en: "ElevenLabs" },
     { id: "gemini", ar: "Google Gemini TTS", en: "Google Gemini TTS" },
-    { id: "openai", ar: "OpenAI TTS", en: "OpenAI TTS" },
-    { id: "easyvoice", ar: "EasyVoice", en: "EasyVoice" },
-    { id: "azure", ar: "Microsoft Azure TTS", en: "Microsoft Azure TTS" },
-    { id: "polly", ar: "Amazon Polly", en: "Amazon Polly" },
+    { id: "camb", ar: "CAMB.AI", en: "CAMB.AI" },
+    { id: "azure", ar: "Microsoft Azure TTS (مدفوع)", en: "Microsoft Azure TTS (Paid)" },
+    { id: "polly", ar: "Amazon Polly (مدفوع)", en: "Amazon Polly (Paid)" },
   ];
   return (
     <div className="mt-8">
@@ -327,8 +326,7 @@ function EnginePanel() {
       {engine === "browser" && <BrowserPanel />}
       {engine === "elevenlabs" && <ElevenPanel />}
       {engine === "gemini" && <GeminiPanel />}
-      {engine === "openai" && <OpenAIPanel />}
-      {engine === "easyvoice" && <EasyVoicePanel />}
+      {engine === "camb" && <CambPanel />}
       {engine === "azure" && <AzurePanel />}
       {engine === "polly" && <PollyPanel />}
     </div>
@@ -883,81 +881,68 @@ function Footer() {
   );
 }
 
-const OPENAI_MODELS = [
-  { value: "gpt-4o-mini-tts", label: "gpt-4o-mini-tts" },
-  { value: "tts-1", label: "tts-1" },
-  { value: "tts-1-hd", label: "tts-1-hd" },
+const CAMB_LANGUAGES = [
+  { value: "ar-eg", ar: "عربي (مصر)", en: "Arabic (Egypt)" },
+  { value: "ar-sa", ar: "عربي (السعودية)", en: "Arabic (Saudi Arabia)" },
+  { value: "ar-ae", ar: "عربي (الإمارات)", en: "Arabic (UAE)" },
+  { value: "en-us", ar: "إنجليزي (أمريكا)", en: "English (US)" },
+  { value: "en-gb", ar: "إنجليزي (بريطانيا)", en: "English (UK)" },
 ];
 
-const OPENAI_VOICES = [
-  "alloy",
-  "ash",
-  "ballad",
-  "coral",
-  "echo",
-  "fable",
-  "onyx",
-  "nova",
-  "sage",
-  "shimmer",
-  "verse",
-  "marin",
-  "cedar",
+const CAMB_SPEECH_MODELS = [
+  { value: "mars-8.1-flash-beta", ar: "سريع (Flash)", en: "Fast (Flash)" },
+  { value: "mars-8.1-pro-beta", ar: "عالي الجودة (Pro)", en: "High quality (Pro)" },
+  { value: "mars-instruct", ar: "تحكم بالتعليمات (Instruct)", en: "Instruction-controlled" },
 ];
 
-const OPENAI_INSTRUCTION_CHIPS = [
-  { value: "Speak in a calm, professional tone", ar: "هادئ ومهني", en: "Calm & professional" },
-  {
-    value: "Speak excitedly and briskly, like a commercial ad",
-    ar: "إعلان حماسي",
-    en: "Excited ad",
-  },
-  {
-    value: "Speak warmly and slowly, like a bedtime story for a child",
-    ar: "قصة أطفال",
-    en: "Bedtime story",
-  },
-  { value: "Speak formally and clearly, like a news anchor", ar: "نشرة أخبار", en: "News anchor" },
-];
-
-function OpenAIPanel() {
+function CambPanel() {
   const t = useTTS();
   const isAr = t.locale === "ar";
   return (
     <div className="space-y-3">
       <label className="block text-sm font-semibold">
-        {isAr ? "مفتاح OpenAI API" : "OpenAI API key"}
+        {isAr ? "مفتاح CAMB.AI API" : "CAMB.AI API key"}
       </label>
       <input
         type="password"
-        value={t.openaiKey}
-        onChange={(e) => t.setOpenaiKey(e.target.value)}
-        placeholder="sk-..."
+        value={t.cambKey}
+        onChange={(e) => t.setCambKey(e.target.value)}
         className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
       />
 
-      <label className="block text-sm font-semibold">{isAr ? "النموذج" : "Model"}</label>
-      <select
-        value={t.openaiModel}
-        onChange={(e) => t.setOpenaiModel(e.target.value)}
-        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+      <button
+        type="button"
+        onClick={() => {
+          t.loadCambVoices().catch(() => {});
+        }}
+        className="w-full rounded-xl border border-border bg-card p-3 text-sm font-semibold transition hover:bg-accent"
       >
-        {OPENAI_MODELS.map((m) => (
-          <option key={m.value} value={m.value}>
-            {m.label}
-          </option>
-        ))}
-      </select>
+        {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load voices available on my account"}
+      </button>
 
-      <label className="block text-sm font-semibold">{isAr ? "الصوت" : "Voice"}</label>
+      {t.cambVoices.length > 0 && (
+        <select
+          value={t.cambVoiceId}
+          onChange={(e) => t.setCambVoiceId(e.target.value)}
+          className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+        >
+          {t.cambVoices.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.voice_name} {v.gender ? `(${v.gender})` : ""}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <label className="block text-sm font-semibold">{isAr ? "اللغة" : "Language"}</label>
       <select
-        value={t.openaiVoice}
-        onChange={(e) => t.setOpenaiVoice(e.target.value)}
+        value={t.cambLanguage}
+        onChange={(e) => t.setCambLanguage(e.target.value)}
         className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
       >
-        {OPENAI_VOICES.map((v) => (
-          <option key={v} value={v}>
-            {v}
+        {CAMB_LANGUAGES.map((o) => (
+          <option key={o.value} value={o.value}>
+            {isAr ? o.ar : o.en}
           </option>
         ))}
       </select>
@@ -969,152 +954,50 @@ function OpenAIPanel() {
         <div className="mt-3 space-y-3">
           <div>
             <label className="block text-sm font-semibold">
-              {isAr ? "تعليمات الأسلوب (اختياري)" : "Style instructions (optional)"}
+              {isAr ? "نموذج الكلام" : "Speech model"}
             </label>
-            <input
-              type="text"
-              value={t.openaiInstructions}
-              onChange={(e) => t.setOpenaiInstructions(e.target.value)}
-              placeholder={
-                isAr ? "مثال: تكلم بحماس وسرعة معتدلة" : "e.g. Speak cheerfully and briskly"
-              }
-              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
-            />
-            <div className="mt-2 flex flex-wrap gap-2">
-              {OPENAI_INSTRUCTION_CHIPS.map((chip) => (
-                <button
-                  key={chip.value}
-                  type="button"
-                  onClick={() =>
-                    t.setOpenaiInstructions(t.openaiInstructions === chip.value ? "" : chip.value)
-                  }
-                  className={`rounded-full border px-3 py-1 text-xs transition ${
-                    t.openaiInstructions === chip.value
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background hover:bg-accent"
-                  }`}
-                >
-                  {isAr ? chip.ar : chip.en}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {isAr
-                ? "يعمل فقط مع نموذج gpt-4o-mini-tts، ولا يعمل مع tts-1 وtts-1-hd."
-                : "Only works with gpt-4o-mini-tts — not supported by tts-1 or tts-1-hd."}
-            </p>
-          </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {isAr
-              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى OpenAI عند الاستماع فقط."
-              : "Your key isn't saved anywhere and goes straight to OpenAI only when you press Listen."}
-          </p>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {isAr
-              ? "لا تملك مفتاحًا؟ أنشئ حسابًا على platform.openai.com ثم اذهب لـ API keys وأنشئ مفتاحًا جديدًا. الاستخدام مدفوع بالاستهلاك (ليس مجانيًا بالكامل)."
-              : "No key yet? Sign up at platform.openai.com and create one under API keys. Usage is billed per character (no permanent free tier)."}
-          </p>
-        </div>
-      </details>
-    </div>
-  );
-}
-
-const EASYVOICE_VOICES = [
-  "af_aoede",
-  "am_echo",
-  "ar_f1",
-  "ar_f2",
-  "ar_f3",
-  "ar_f4",
-  "ar_f5",
-  "ar_m1",
-  "ar_m2",
-  "ar_m3",
-  "ar_m4",
-  "ar_m5",
-];
-
-const EASYVOICE_TONES = [
-  { value: "", ar: "افتراضي (Neutral)", en: "Default (Neutral)" },
-  { value: "warm", ar: "دافئ", en: "Warm" },
-  { value: "bright", ar: "مشرق", en: "Bright" },
-  { value: "bass", ar: "عميق (Bass)", en: "Bass" },
-];
-
-function EasyVoicePanel() {
-  const t = useTTS();
-  const isAr = t.locale === "ar";
-  return (
-    <div className="space-y-3">
-      <label className="block text-sm font-semibold">
-        {isAr ? "مفتاح EasyVoice API" : "EasyVoice API key"}
-      </label>
-      <input
-        type="password"
-        value={t.easyvoiceKey}
-        onChange={(e) => t.setEasyvoiceKey(e.target.value)}
-        placeholder="ev_..."
-        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
-      />
-
-      <label className="block text-sm font-semibold">{isAr ? "الصوت" : "Voice"}</label>
-      <select
-        value={t.easyvoiceVoice}
-        onChange={(e) => t.setEasyvoiceVoice(e.target.value)}
-        className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
-      >
-        {EASYVOICE_VOICES.map((v) => (
-          <option key={v} value={v}>
-            {v}
-          </option>
-        ))}
-      </select>
-
-      <details className="rounded-xl border border-border p-3">
-        <summary className="cursor-pointer text-sm font-semibold">
-          {isAr ? "إعدادات متقدمة ومعلومات" : "Advanced settings & info"}
-        </summary>
-        <div className="mt-3 space-y-3">
-          <div>
-            <label className="block text-sm font-semibold">{isAr ? "لون الصوت" : "Tone"}</label>
             <select
-              value={t.easyvoiceTone}
-              onChange={(e) => t.setEasyvoiceTone(e.target.value)}
+              value={t.cambSpeechModel}
+              onChange={(e) => t.setCambSpeechModel(e.target.value)}
               className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
             >
-              {EASYVOICE_TONES.map((o) => (
+              {CAMB_SPEECH_MODELS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {isAr ? o.ar : o.en}
                 </option>
               ))}
             </select>
           </div>
-          <Slider
-            label={isAr ? "طبقة الصوت" : "Pitch"}
-            value={t.easyvoicePitch}
-            min={-4}
-            max={4}
-            step={0.5}
-            onChange={t.setEasyvoicePitch}
-          />
-          <Slider
-            label={isAr ? "مستوى الصوت (ديسيبل)" : "Volume (dB)"}
-            value={t.easyvoiceVolumeDb}
-            min={-6}
-            max={6}
-            step={0.5}
-            onChange={t.setEasyvoiceVolumeDb}
-          />
+          {t.cambSpeechModel === "mars-instruct" && (
+            <div>
+              <label className="block text-sm font-semibold">
+                {isAr ? "تعليمات الأسلوب (اختياري)" : "Style instructions (optional)"}
+              </label>
+              <input
+                type="text"
+                value={t.cambUserInstructions}
+                onChange={(e) => t.setCambUserInstructions(e.target.value)}
+                placeholder={
+                  isAr ? "مثال: تكلم بحماس وسرعة معتدلة" : "e.g. Speak cheerfully and briskly"
+                }
+                className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isAr
+                  ? "يمكنك أيضًا كتابة وسوم زي [excited] أو [speaking slowly] داخل النص نفسه مع هذا النموذج."
+                  : "You can also add tags like [excited] or [speaking slowly] inside the text itself with this model."}
+              </p>
+            </div>
+          )}
           <p className="text-xs leading-relaxed text-muted-foreground">
             {isAr
-              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى EasyVoice عند الاستماع فقط."
-              : "Your key isn't saved anywhere and goes straight to EasyVoice only when you press Listen."}
+              ? "المفتاح لا يُحفظ ويُرسل مباشرة إلى CAMB.AI عند الاستماع فقط."
+              : "Your key isn't saved anywhere and goes straight to CAMB.AI only when you press Listen."}
           </p>
           <p className="text-xs leading-relaxed text-muted-foreground">
             {isAr
-              ? "لا تملك مفتاحًا؟ سجّل مجانًا على easyvoice.ae/signup واحصل على مفتاح API من إعدادات حسابك."
-              : "No key yet? Sign up for free at easyvoice.ae/signup and grab an API key from your account settings."}
+              ? "لا تملك مفتاحًا؟ سجّل مجانًا على studio.camb.ai ثم اذهب لـ Settings → API Keys."
+              : "No key yet? Sign up for free at studio.camb.ai then go to Settings → API Keys."}
           </p>
         </div>
       </details>
