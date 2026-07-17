@@ -882,6 +882,10 @@ const CAMB_ALL_ARABIC = "all-arabic";
 function CambPanel() {
   const t = useTTS();
   const isAr = t.locale === "ar";
+  const [langErr, setLangErr] = useState("");
+  const [langBusy, setLangBusy] = useState(false);
+  const [voiceErr, setVoiceErr] = useState("");
+  const [voiceBusy, setVoiceBusy] = useState(false);
   const arabicLanguageIds = t.cambLanguages
     .filter((l) => /arabic/i.test(l.language))
     .map((l) => String(l.id));
@@ -892,7 +896,32 @@ function CambPanel() {
         ? t.cambVoices.filter((v) => String(v.language) === t.cambLanguageId)
         : t.cambVoices;
   const loadBtnClass =
-    "w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10";
+    "w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60";
+
+  const loadLanguages = async () => {
+    setLangBusy(true);
+    setLangErr("");
+    try {
+      await t.loadCambLanguages();
+    } catch (e) {
+      setLangErr(e instanceof Error ? e.message : "err");
+    } finally {
+      setLangBusy(false);
+    }
+  };
+
+  const loadVoices = async () => {
+    setVoiceBusy(true);
+    setVoiceErr("");
+    try {
+      await t.loadCambVoices();
+    } catch (e) {
+      setVoiceErr(e instanceof Error ? e.message : "err");
+    } finally {
+      setVoiceBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <label className="block text-sm font-semibold">
@@ -905,15 +934,10 @@ function CambPanel() {
         className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
       />
 
-      <button
-        type="button"
-        onClick={() => {
-          t.loadCambLanguages().catch(() => {});
-        }}
-        className={loadBtnClass}
-      >
+      <button type="button" onClick={loadLanguages} disabled={langBusy} className={loadBtnClass}>
         {isAr ? "تحميل اللغات المتاحة" : "Load available languages"}
       </button>
+      {langErr && <p className="text-sm text-destructive">{langErr}</p>}
 
       {t.cambLanguages.length > 0 && (
         <>
@@ -935,15 +959,10 @@ function CambPanel() {
         </>
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          t.loadCambVoices().catch(() => {});
-        }}
-        className={loadBtnClass}
-      >
+      <button type="button" onClick={loadVoices} disabled={voiceBusy} className={loadBtnClass}>
         {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load voices available on my account"}
       </button>
+      {voiceErr && <p className="text-sm text-destructive">{voiceErr}</p>}
 
       {filteredVoices.length > 0 && (
         <select
@@ -1058,6 +1077,21 @@ const FISH_TAGS = [
 function FishPanel() {
   const t = useTTS();
   const isAr = t.locale === "ar";
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const load = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      await t.loadFishVoices();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "err");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <label className="block text-sm font-semibold">
@@ -1085,13 +1119,13 @@ function FishPanel() {
 
       <button
         type="button"
-        onClick={() => {
-          t.loadFishVoices().catch(() => {});
-        }}
-        className="w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10"
+        onClick={load}
+        disabled={busy}
+        className="w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
       >
         {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load voices available on my account"}
       </button>
+      {err && <p className="text-sm text-destructive">{err}</p>}
 
       {t.fishVoices.length > 0 && (
         <select
