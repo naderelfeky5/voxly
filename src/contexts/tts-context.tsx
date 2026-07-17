@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { updateFavicon } from "../lib/utils";
+import { fishVoicesProxy, fishTtsProxy } from "../lib/fish-proxy";
 
 export type Engine = "browser" | "elevenlabs" | "gemini" | "camb" | "fish" | "azure" | "polly";
 export type Locale = "ar" | "en";
@@ -594,9 +595,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   const loadFishVoices = useCallback(async () => {
     if (!fishKey) throw new Error("أدخل المفتاح أولاً");
-    const res = await fetch("https://api.fish.audio/model?self=true&page_size=100", {
-      headers: { Authorization: `Bearer ${fishKey}` },
-    });
+    const res = await fishVoicesProxy({ data: { apiKey: fishKey } });
     if (!res.ok) throw new Error("فشل تحميل الأصوات");
     const data = (await res.json()) as { items?: FishVoice[] } | FishVoice[];
     const list = Array.isArray(data) ? data : data.items || [];
@@ -607,21 +606,15 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const speakFish = useCallback(async () => {
     if (!fishKey) throw new Error("أدخل مفتاح Fish Audio API");
     setStatus("loading");
-    const body: Record<string, unknown> = {
-      text,
-      format: "mp3",
-      latency: fishLatency || "normal",
-      prosody: { speed: fishSpeed },
-    };
-    if (fishVoiceId) body.reference_id = fishVoiceId;
-    const res = await fetch("https://api.fish.audio/v1/tts", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${fishKey}`,
-        "Content-Type": "application/json",
+    const res = await fishTtsProxy({
+      data: {
+        apiKey: fishKey,
         model: fishModel || "s2.1-pro",
+        text,
+        voiceId: fishVoiceId || undefined,
+        speed: fishSpeed,
+        latency: fishLatency || "normal",
       },
-      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const t = await res.text();
