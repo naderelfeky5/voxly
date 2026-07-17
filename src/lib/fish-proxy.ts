@@ -7,12 +7,17 @@ import { createServerFn } from "@tanstack/react-start";
 // streamed straight back. The key is never stored anywhere — it only lives
 // for the duration of this one request.
 
-type FishVoicesInput = { apiKey: string };
+type FishVoicesInput = { apiKey: string; language?: string };
 
 export const fishVoicesProxy = createServerFn({ method: "POST" })
   .validator((d: FishVoicesInput) => d)
   .handler(async ({ data }) => {
-    const res = await fetch("https://api.fish.audio/model?self=true&page_size=100", {
+    const params = new URLSearchParams({
+      page_size: "100",
+      sort_by: "score",
+    });
+    if (data.language) params.set("language", data.language);
+    const res = await fetch(`https://api.fish.audio/model?${params}`, {
       headers: { Authorization: `Bearer ${data.apiKey}` },
     });
     const text = await res.text();

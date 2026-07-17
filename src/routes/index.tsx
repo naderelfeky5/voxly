@@ -1123,7 +1123,7 @@ function FishPanel() {
         disabled={busy}
         className="w-full rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
       >
-        {isAr ? "تحميل الأصوات المتاحة على حسابي" : "Load voices available on my account"}
+        {isAr ? "تحميل أشهر الأصوات العربية المتاحة" : "Load top Arabic voices"}
       </button>
       {err && <p className="text-sm text-destructive">{err}</p>}
 

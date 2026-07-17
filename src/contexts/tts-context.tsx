@@ -595,7 +595,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
 
   const loadFishVoices = useCallback(async () => {
     if (!fishKey) throw new Error("أدخل المفتاح أولاً");
-    const res = await fishVoicesProxy({ data: { apiKey: fishKey } });
+    const res = await fishVoicesProxy({ data: { apiKey: fishKey, language: "ar" } });
     if (!res.ok) throw new Error("فشل تحميل الأصوات");
     const data = (await res.json()) as { items?: FishVoice[] } | FishVoice[];
     const list = Array.isArray(data) ? data : data.items || [];
