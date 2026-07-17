@@ -738,7 +738,7 @@ function Controls() {
   const label =
     status === "loading"
       ? isAr
-        ? "جاري..."
+        ? "جارٍ إنشاء الصوت"
         : "Loading..."
       : status === "playing"
         ? isAr
