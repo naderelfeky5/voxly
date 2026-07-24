@@ -25,6 +25,7 @@ function Index() {
 
 function Header() {
   const { locale, setLocale, toggleTheme } = useTTS();
+  const [showKeys, setShowKeys] = useState(false);
   return (
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-5 sm:flex sm:justify-between">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -32,6 +33,14 @@ function Header() {
         <span className="truncate text-xl font-bold tracking-tight sm:text-2xl">Voxly</span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <button
+          onClick={() => setShowKeys(true)}
+          aria-label={locale === "ar" ? "مفاتيح API الخاصة بي" : "My API keys"}
+          title={locale === "ar" ? "مفاتيح API الخاصة بي" : "My API keys"}
+          className="grid size-9 place-items-center rounded-full border border-border bg-card text-base shadow-sm transition hover:bg-accent"
+        >
+          🔑
+        </button>
         <button
           onClick={toggleTheme}
           aria-label="toggle theme"
@@ -47,7 +56,104 @@ function Header() {
           {locale === "ar" ? "English" : "العربية"}
         </button>
       </div>
+      {showKeys && <KeysModal onClose={() => setShowKeys(false)} />}
     </header>
+  );
+}
+
+function KeysModal({ onClose }: { onClose: () => void }) {
+  const t = useTTS();
+  const isAr = t.locale === "ar";
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const fields: { label: string; value: string; onChange: (v: string) => void }[] = [
+    { label: "ElevenLabs", value: t.elevenKey, onChange: t.setElevenKey },
+    { label: "Google Gemini", value: t.geminiKey, onChange: t.setGeminiKey },
+    { label: "CAMB.AI", value: t.cambKey, onChange: t.setCambKey },
+    { label: "Fish Audio", value: t.fishKey, onChange: t.setFishKey },
+    { label: "Microsoft Azure", value: t.azureKey, onChange: t.setAzureKey },
+    { label: "AWS Access Key ID (Polly)", value: t.pollyAccessKey, onChange: t.setPollyAccessKey },
+    {
+      label: "AWS Secret Access Key (Polly)",
+      value: t.pollySecretKey,
+      onChange: t.setPollySecretKey,
+    },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16 sm:pt-24"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl border border-border bg-card p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">🔑 {isAr ? "مفاتيح API الخاصة بي" : "My API keys"}</h3>
+          <button
+            onClick={onClose}
+            aria-label="close"
+            className="grid size-8 place-items-center rounded-full text-lg hover:bg-accent"
+          >
+            ×
+          </button>
+        </div>
+
+        <p className="mt-2 rounded-xl bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+          {isAr
+            ? "المفاتيح دي بتتحفظ في متصفحك إنت بس (Local Storage) — مش على أي سيرفر. لو بتستخدم جهاز مشترك مع حد تاني، امسحها بعد الاستخدام من الزرار تحت. مفيش تشفير عليها، فأي حد يوصل لجهازك ماديًا أو من غير قصد يقدر يشوفها."
+            : "These keys are saved only in your own browser (Local Storage) — never on a server. If you're on a shared device, clear them after use with the button below. They aren't encrypted, so anyone with access to this device could read them."}
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {fields.map((f) => (
+            <div key={f.label}>
+              <label className="mb-1 block text-sm font-semibold">{f.label}</label>
+              <input
+                type="password"
+                value={f.value}
+                onChange={(e) => f.onChange(e.target.value)}
+                placeholder={isAr ? "غير محفوظ" : "Not saved"}
+                className="w-full rounded-xl border border-border bg-background p-2.5 text-sm outline-none focus:border-primary"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 border-t border-border pt-4">
+          {confirmClear ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-destructive">
+                {isAr ? "متأكد؟ هيتم مسح كل المفاتيح دي." : "Are you sure? This clears all keys."}
+              </span>
+              <button
+                onClick={() => {
+                  t.clearAllKeys();
+                  setConfirmClear(false);
+                }}
+                className="rounded-full bg-destructive px-4 py-1.5 text-sm font-semibold text-destructive-foreground"
+              >
+                {isAr ? "أيوه، امسح الكل" : "Yes, clear all"}
+              </button>
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="rounded-full border border-border px-4 py-1.5 text-sm font-semibold hover:bg-accent"
+              >
+                {isAr ? "إلغاء" : "Cancel"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmClear(true)}
+              className="rounded-full border border-destructive/40 px-4 py-1.5 text-sm font-semibold text-destructive transition hover:bg-destructive/10"
+            >
+              {isAr ? "🗑 مسح كل المفاتيح" : "🗑 Clear all keys"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -738,7 +844,7 @@ function Controls() {
   const label =
     status === "loading"
       ? isAr
-        ? "جارٍ إنشاء الصوت"
+        ? "جاري..."
         : "Loading..."
       : status === "playing"
         ? isAr

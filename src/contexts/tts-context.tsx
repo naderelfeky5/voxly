@@ -155,6 +155,9 @@ interface TTSState {
   resume: () => void;
   stop: () => void;
   download: () => void;
+
+  // key management
+  clearAllKeys: () => void;
 }
 
 const Ctx = createContext<TTSState | null>(null);
@@ -163,6 +166,23 @@ export function useTTS() {
   const v = useContext(Ctx);
   if (!v) throw new Error("useTTS must be used within TTSProvider");
   return v;
+}
+
+// Persists a string value to localStorage under a namespaced key, so it
+// survives refreshes and reopening the site. Used for API keys the person
+// explicitly chose to save (see the "My API Keys" panel).
+function usePersistedState(storageKey: string, defaultValue: string) {
+  const [value, setValue] = useState<string>(() => {
+    if (typeof window === "undefined") return defaultValue;
+    const v = window.localStorage.getItem(storageKey);
+    return v ?? defaultValue;
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, value);
+    } catch {}
+  }, [storageKey, value]);
+  return [value, setValue] as const;
 }
 
 export function TTSProvider({ children }: { children: ReactNode }) {
@@ -187,7 +207,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [browserVoicesReady, setBrowserVoicesReady] = useState(false);
   const [browserVoiceURI, setBrowserVoiceURI] = useState("");
 
-  const [elevenKey, setElevenKey] = useState("");
+  const [elevenKey, setElevenKey] = usePersistedState("voxly:key:eleven", "");
   const [elevenVoices, setElevenVoices] = useState<{ voice_id: string; name: string }[]>([]);
   const [elevenVoiceId, setElevenVoiceId] = useState("");
   const [elevenManualId, setElevenManualId] = useState("");
@@ -196,7 +216,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [style, setStyle] = useState(0);
   const [speakerBoost, setSpeakerBoost] = useState(true);
 
-  const [geminiKey, setGeminiKey] = useState("");
+  const [geminiKey, setGeminiKey] = usePersistedState("voxly:key:gemini", "");
   const [geminiModels, setGeminiModels] = useState<string[]>([]);
   const [geminiModel, setGeminiModel] = useState("");
   const [geminiVoice, setGeminiVoice] = useState("Kore");
@@ -205,7 +225,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [geminiPace, setGeminiPace] = useState("");
   const [geminiAccent, setGeminiAccent] = useState("");
 
-  const [cambKey, setCambKey] = useState("");
+  const [cambKey, setCambKey] = usePersistedState("voxly:key:camb", "");
   const [cambLanguages, setCambLanguages] = useState<CambLanguage[]>([]);
   const [cambLanguageId, setCambLanguageId] = useState("");
   const [cambVoices, setCambVoices] = useState<CambVoice[]>([]);
@@ -214,23 +234,23 @@ export function TTSProvider({ children }: { children: ReactNode }) {
   const [cambSpeakingRate, setCambSpeakingRate] = useState(1);
   const [cambUserInstructions, setCambUserInstructions] = useState("");
 
-  const [fishKey, setFishKey] = useState("");
+  const [fishKey, setFishKey] = usePersistedState("voxly:key:fish", "");
   const [fishModel, setFishModel] = useState("s2.1-pro");
   const [fishVoices, setFishVoices] = useState<FishVoice[]>([]);
   const [fishVoiceId, setFishVoiceId] = useState("");
   const [fishSpeed, setFishSpeed] = useState(1);
   const [fishLatency, setFishLatency] = useState("normal");
 
-  const [azureKey, setAzureKey] = useState("");
-  const [azureRegion, setAzureRegion] = useState("eastus");
+  const [azureKey, setAzureKey] = usePersistedState("voxly:key:azure", "");
+  const [azureRegion, setAzureRegion] = usePersistedState("voxly:region:azure", "eastus");
   const [azureVoice, setAzureVoice] = useState("ar-EG-SalmaNeural");
   const [azureStyle, setAzureStyle] = useState("");
   const [azureStyleDegree, setAzureStyleDegree] = useState(1);
   const [azureRole, setAzureRole] = useState("");
 
-  const [pollyAccessKey, setPollyAccessKey] = useState("");
-  const [pollySecretKey, setPollySecretKey] = useState("");
-  const [pollyRegion, setPollyRegion] = useState("us-east-1");
+  const [pollyAccessKey, setPollyAccessKey] = usePersistedState("voxly:key:polly-access", "");
+  const [pollySecretKey, setPollySecretKey] = usePersistedState("voxly:key:polly-secret", "");
+  const [pollyRegion, setPollyRegion] = usePersistedState("voxly:region:polly", "us-east-1");
   const [pollyVoice, setPollyVoice] = useState("Zeina");
   const [pollyEngine, setPollyEngine] = useState("standard");
 
@@ -772,6 +792,16 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     a.click();
   }, [lastAudioUrl, engine]);
 
+  const clearAllKeys = useCallback(() => {
+    setElevenKey("");
+    setGeminiKey("");
+    setCambKey("");
+    setFishKey("");
+    setAzureKey("");
+    setPollyAccessKey("");
+    setPollySecretKey("");
+  }, []);
+
   // apply live rate/volume to browser utterance is not supported mid-speech, but audio element yes
   useEffect(() => {
     if (audioRef.current) {
@@ -890,6 +920,7 @@ export function TTSProvider({ children }: { children: ReactNode }) {
     resume,
     stop,
     download,
+    clearAllKeys,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
